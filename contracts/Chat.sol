@@ -28,7 +28,9 @@ contract Chat {
     constructor() {
         admin = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
         users[0x7B60eD2A82267aB814256d3aB977ae5434d01d8b] = User("Admin", true);
+        userAddresses.push(0x7B60eD2A82267aB814256d3aB977ae5434d01d8b);
         users[0x8455022A4Ef3044A3B0949517D8aA0006054403d] = User("H'nifa", true);
+        userAddresses.push(0x8455022A4Ef3044A3B0949517D8aA0006054403d);
         usersByName["H'nifa"] = 0x8455022A4Ef3044A3B0949517D8aA0006054403d;
         usersByName["Admin"] = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
     }
