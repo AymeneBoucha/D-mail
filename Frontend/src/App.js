@@ -1,9 +1,10 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from 'react';
 import ChatContract from "./Chat.sol/Chat.json";
-import NameForum from "./NameForum";
-import ConnectWallet from "./ConnectWallet";
-import Login from "./Login";
+import NameForum from "./pages/NameForum";
+import ConnectWallet from "./pages/ConnectWallet";
+import Login from "./pages/Login";
+import Admin from "./pages/Admin";
 import {
   BrowserRouter as Router,
   Routes,
@@ -11,16 +12,15 @@ import {
   BrowserRouter,
 } from "react-router-dom";
 import React from "react";
-import Inbox from "./Inbox";
-
-import SendMessage from "./SendMessage";
+import Inbox from "./pages/Inbox";
+import SendMessage from "./Components/SendMessage";
 function App() {
   const [name, setName] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
  const [connected,setConnected]=useState("");
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   
-  const contractAddress = '0x11e7d63d68704D2eEC1312928C0007dd886D21E0';
+  const contractAddress = '0x888980dF40840Ee423Db5699f51B5Da61c333ec8';
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
   async function connectWallet() {
@@ -46,7 +46,7 @@ function App() {
     )}
     <Route path="/create" element={<ConnectWallet />} />
     <Route path="/name" element={<NameForum />} />
-  
+    <Route path="/admin" element={<Admin/>} />
     </Routes>
     </Router>
 

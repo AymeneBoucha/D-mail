@@ -1,9 +1,9 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "D:\\Messaging_App\\contracts\\Chat.sol": {
-      "lastModificationDate": 1680369044607,
-      "contentHash": "2f95017e924eb5f61a4efb6344d378e3",
+    "D:\\Dmail\\D-mail\\contracts\\Chat.sol": {
+      "lastModificationDate": 1680557366170,
+      "contentHash": "3c767b15c1933d7ef92e8d2222027ab4",
       "sourceName": "contracts/Chat.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -36,9 +36,9 @@
         "Chat"
       ]
     },
-    "D:\\Messaging_App\\contracts\\Lock.sol": {
-      "lastModificationDate": 1679203284802,
-      "contentHash": "ae66265769cc28ebdaa34881df95bc5e",
+    "D:\\Dmail\\D-mail\\contracts\\Lock.sol": {
+      "lastModificationDate": 1680469880636,
+      "contentHash": "ec3c7dc6d807b6b903e80a92dda2af08",
       "sourceName": "contracts/Lock.sol",
       "solcConfig": {
         "version": "0.8.18",
@@ -69,6 +69,41 @@
       ],
       "artifacts": [
         "Lock"
+      ]
+    },
+    "D:\\Dmail\\D-mail\\contracts\\UserAccount.sol": {
+      "lastModificationDate": 1680510931515,
+      "contentHash": "2dc97186d5c6ee15487cf05aeb574c34",
+      "sourceName": "contracts/UserAccount.sol",
+      "solcConfig": {
+        "version": "0.8.18",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "UserAccount"
       ]
     }
   }

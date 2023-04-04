@@ -7,6 +7,8 @@ contract Chat {
         string name;
         string email;
         bool exists;
+        address walletAddress;
+        bool isAdmin;
     }
     
     struct Message {
@@ -29,15 +31,15 @@ contract Chat {
     mapping(string => address) usersByEmail;
     
     constructor() {
-        admin = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
-        users[0x7B60eD2A82267aB814256d3aB977ae5434d01d8b] = User("Admin", "admin@esi-sba.dz", true);
-        userAddresses.push(0x7B60eD2A82267aB814256d3aB977ae5434d01d8b);
-        users[0x8455022A4Ef3044A3B0949517D8aA0006054403d] = User("H'nifa", "hnifa@esi-sba.dz", true);
-        userAddresses.push(0x8455022A4Ef3044A3B0949517D8aA0006054403d);
-        usersByName["H'nifa"] = 0x8455022A4Ef3044A3B0949517D8aA0006054403d;
-        usersByName["Admin"] = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
-        usersByEmail["hnifa@esi-sba.dz"] = 0x8455022A4Ef3044A3B0949517D8aA0006054403d;
-        usersByEmail["admin@esi-sba.dz"] = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
+        admin = 0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef;
+        users[0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef] = User("Admin", "admin@esi-sba.dz", true,0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef,true);
+        userAddresses.push(0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef);
+        users[0x7fD3E2234101c7a3A97E6839E2828Ff72112a107] = User("H'nifa", "hnifa@esi-sba.dz", true,0x7fD3E2234101c7a3A97E6839E2828Ff72112a107,false);
+        userAddresses.push(0x7fD3E2234101c7a3A97E6839E2828Ff72112a107);
+        usersByName["H'nifa"] = 0x7fD3E2234101c7a3A97E6839E2828Ff72112a107;
+        usersByName["Admin"] = 0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef;
+        usersByEmail["hnifa@esi-sba.dz"] = 0x7fD3E2234101c7a3A97E6839E2828Ff72112a107;
+        usersByEmail["admin@esi-sba.dz"] = 0x603C4Ae498fd4147B4dF6378A5f16B150336f5Ef;
 
     }
     
@@ -45,29 +47,68 @@ contract Chat {
 
     modifier onlyAdmin() {
         require(msg.sender == admin, "Only admin can perform this action");
-        _;
+          _;
+    }
+    //makeAdmin : to make someone an admin we change isAdmin=>true
+    function makeAdmin(address userAddress) public onlyAdmin{
+        users[userAddress].isAdmin = true;
     }
     
-
     function createUserId(string memory email, bytes32 Id) public onlyAdmin{
         IDs[Id] = email;
-    }    
+    } 
+    // Define a new role for admins
+  mapping (address => bool) private admins;
+
+  function isAdmin(address user) public view returns (bool) {
+      return admins[user];
+  }
+
+  function addAdmin(address userAddress) public onlyAdmin {
+      admins[userAddress] = true;
+  }
+
+  function removeAdmin(address userAddress) public onlyAdmin {
+      admins[userAddress] = false;
+      users[userAddress].isAdmin = false;
+  }
+
+  //--------------------------------------------------------------------------------------   
 
     function stringsEqual(string memory a, string memory b) private pure returns (bool) {
     return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 
-    function createUser(uint Id, string memory name, string memory email, address walletAddress) public  {
+    //Creat user
+    function createUser(uint Id, string memory name, string memory email, address walletAddress) public {
         require(stringsEqual(IDs[sha256(abi.encode(Id))], email), "You don't have permission to create an account !");
         require(bytes(name).length > 0, "You have to specify your name !");
-        User memory user = User(name, email, true);
+        User memory user = User(name, email, true,walletAddress,false);
         users[walletAddress] = user;
         userAddresses.push(walletAddress);
         usersByName[name] = walletAddress;
         usersByEmail[email] = walletAddress;
         delete IDs[sha256(abi.encode(Id))];
+       // emit UserCreated(name, walletAddress);
     }
+    //Delete user
+   function deleteUser(address walletAddress) public onlyAdmin {
+   require(walletAddress != address(0), "User with given address does not exist.");
+    delete users[walletAddress];
+    delete usersByName[users[walletAddress].name];
+    delete usersByEmail[users[walletAddress].email];
+    for (uint i = 0; i < userAddresses.length; i++) {
+        if (userAddresses[i] == walletAddress) {
+            userAddresses[i] = userAddresses[userAddresses.length - 1];
+            userAddresses.pop();
+            break;
+        }
+    }
+    //emit UserDeleted(walletAddress);
+}
 
+    
+    
     function checkUserExists(address user) public view returns (bool) {
         return bytes(users[user].email).length > 0;
     }
@@ -85,8 +126,11 @@ contract Chat {
         messages.push(message);
         //emit MessageSent(msg.sender, receiver, messageHash);
         }
-
-        function getName(address adresse) external view returns (string memory) {
+    function getAddress(string memory email) public view returns (address) {
+        return usersByEmail[email];
+    }
+    
+    function getName(address adresse) external view returns (string memory) {
         require(
             checkUserExists(adresse) == true,
             "User with given address don't exist"
@@ -99,11 +143,9 @@ contract Chat {
         return users[adresse].email;
     }
 
-    function getAddress(string memory email) public view returns (address) {
-        return usersByEmail[email];
-    }
+    
 
-        function getMessagesCount(string memory email) public view returns (uint){
+    function getMessagesCount(string memory email) public view returns (uint){
             uint count = 0;
         for (uint i = 0; i < messages.length; i++) {
             if (messages[i].sender == getAddress(email)) {
@@ -111,7 +153,7 @@ contract Chat {
             }
         }
         return count;
-        }
+   }
 
         function MessageSent(string memory email) public view returns (Message[] memory) {
         uint count = 0;
@@ -153,6 +195,23 @@ contract Chat {
 
 
 
+function getAllUsers() public view returns (User[] memory) {
+    User[] memory allUsers = new User[](userAddresses.length);
+    for (uint i = 0; i < userAddresses.length; i++) {
+        allUsers[i] = users[userAddresses[i]];
+    }
+    return allUsers;
+}
+
+function editUser(address walletAddress, string memory name, string memory email, bool isAdmin) public onlyAdmin {
+    require(checkUserExists(walletAddress), "User with given address does not exist.");
+    User storage user = users[walletAddress];
+    user.name = name;
+    user.email = email;
+    user.isAdmin = isAdmin;
+    usersByName[name] = walletAddress;
+    usersByEmail[email] = walletAddress;
+}
 
     // Get sent messages function
     /*function getSentMessages() public view returns (Message[] memory) {
