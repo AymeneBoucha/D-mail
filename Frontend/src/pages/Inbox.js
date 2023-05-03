@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SendMessage from '../Components/SendMessage';
+import Messages from '../Components/Messages';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import '../assets/Inbox.css';
@@ -11,10 +12,12 @@ import { MdLabelImportant } from "react-icons/md";
 // Importation de la Navbar et left bar
 import Navbar from '../Components/NavBar';
 //import Leftbar from './LeftBar';
+import axios from "axios";
 
 
 
 const Inbox = () => {
+ 
   const [messages, setMessages] = useState([]);
   const [name, setName] = useState("");
   const [senderEmails, setSenderEmails] = useState({});
@@ -27,6 +30,11 @@ const Inbox = () => {
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
   
+
+  const [imageUrl, setImageUrl] = useState(null);
+  const [fileUrl, setFileUrl] = useState(null);
+
+
   const handleSendMessage = (message) => {
     const newMessage = {
       sender:message.sender,
@@ -122,10 +130,46 @@ const Inbox = () => {
 
   const [hoverIndex, setHoverIndex] = useState(null);
 
+
+
+  //IPFS Receiving Files -------------------------------------------
+
+  const getFileFromIPFS = async (hash) => {
+  try {
+    const res = await axios({
+      method: 'get',
+      url: `https://gateway.pinata.cloud/ipfs/QmXfYESXzZ8dAmcUYrpt4YAixXSPBDDYvzvt5ecdDbtPZ2`,
+      responseType: 'blob',
+     
+    });
+
+    console.log('File retrieved from IPFS:', res.data);
+
+    // Determine the file type based on the content type header
+    const contentType = res.headers['content-type'];
+    if (contentType && contentType.startsWith('image/')) {
+      // If the file is an image, display it
+      const imgUrl = URL.createObjectURL(res.data);
+      setImageUrl(imgUrl);
+      setFileUrl(null);
+    } else {
+      // For other file types, display a download link
+      const fileUrl = URL.createObjectURL(res.data);
+      setFileUrl(fileUrl);
+      setImageUrl(null);
+    }
+
+  } catch (error) {
+    console.log('Error retrieving file from IPFS:', error);
+  }
+};
+
+
+
   return (
     <div className="p-0" style={{fontSize: '1.6rem'}}>
       
-      <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
+    <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
       <div className="row">
       <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
       <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
@@ -138,134 +182,35 @@ const Inbox = () => {
             </div>
           </button>
           </div>
-          <div className="pl-6 pt-4 flex items-center space-x-6">
-      {buttons.map((button) => (
-        <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-          <div className="flex items-center" >
-            {button.icon}
-            <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-            
+
+          <div>
+            <button onClick={getFileFromIPFS}>
+              Get file
+            </button>
+            {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
+            {fileUrl && <a href={fileUrl} download>Download file</a>}
+
           </div>
-        </div>
-      ))}
-    </div>
+
+          <div className="pl-6 pt-4 flex items-center space-x-6">
+              {buttons.map((button) => (
+                <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
+                  <div className="flex items-center" >
+                    {button.icon}
+                    <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
+                    
+                  </div>
+                </div>
+              ))}
+          </div>
           </div>
         </div>
       </div>
-        <div className="col-md-12" style={{ marginTop: '-80px', marginLeft: 250 }}>
-      {name && (
-        <div>
-          {/* <h1>Bienvenue, {name}!</h1> */}
-          <div className="row">
-            <div className="col-md-12">
-            <div className="d-flex justify-content-between align-items-center" style={{padding: 10, width: "calc(98% - 250px)", borderBottom: "1px solid #ccc", marginTop: -35}}>
-                  <div className="m-2 d-flex align-items-center font-medium fs-4 gap-3" >
-                    <h3>Bienvenue, {name} !</h3>
-                  </div>
-                  <div className="mt-3 d-flex align-items-center font-medium gap-3">
-                    <img src="./config.png" width={30} height={30} />
-                  </div>
-              </div>
-              <h1  style={{ marginTop: 10, marginBottom: 20, marginLeft: -270 , float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, fontSize: 30}}>Mes Messages</h1>
-              <ul
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0px",
-                  padding: "0",
-                  width: "calc(98% - 250px)",
-                  backgroundColor: "ghostwhite",
-                }}
-              >
-                <li className="d-flex justify-content-between align-items-center" style={{padding: 10, borderBottom: "1px solid #ccc",}}>
-                  <div className="m-2 d-flex align-items-center font-medium fs-4 gap-3">
-                    <img src="./logo.png" width={30} height={30} /><p className="m-0" style={{fontSize: '1.7rem' }}>inbox</p>
-                  </div>
-                  <div className="m-2 d-flex align-items-center font-medium gap-3">
-                    <p className="m-0" style={{fontSize: '1.6rem' }}>1-50 of 354</p>
-                  </div>
-                </li>
-                {messages.map((message, index) => (
-                  <li
-                    key={index}
-                    onMouseEnter={() => setHoverIndex(index)}
-                    onMouseLeave={() => setHoverIndex(null)}
-                    style={{
-                      borderBottom: "1px solid #ccc",
-                      width: "100%",
-                      padding: "15px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      backgroundColor: message.read ? "white" : "ghostwhite",
-                    }}
-                  >
-                    <div>
-                      <div className="row">
-                        <div className="col-md-12">
-                          <strong>From :</strong> {senderEmails[message.sender]}
-                          <br/>
-                          <strong>To : </strong>{receiverEmails[message.receiver]}
-                        </div>
-                        <div className="col-md-12">
-                        <strong>{message.subject}</strong>
-                        <br/>
-                          <strong>Message : </strong>
-                          {message.message.length > 100
-                            ? `${message.message.substring(0, 100)}...`
-                            : message.message}
-                            <br/>
-                        </div>
-                        
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
-                      {hoverIndex === index ? (
-                        <>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              marginRight: "10px",
-                            }}
-                          >
-                            <img src="./reply.png" width={20} height={20} />
-                          </button>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              marginRight: "10px",
-                            }}
-                          >
-                            <img src="./reply2.png" width={20} height={20} />
-                          </button>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <img src="./delete.png" width={20} height={20} />
-                          </button>
-                        </>
-                      ) : (
-                        <p className="d-flex justify-content-center" style={{float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1}}>{formatTimestamp(message.timestamp.toNumber())}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="col-md-12">
+        <div className="col-md-12" >
+         <Messages/>
+       <div className="col-md-12">
               {showSendMessage && <SendMessage onSendMessage={handleSendMessage} />}
-            </div>
-          </div>
-        </div>
-      )}
+       </div>
         </div>
     </div>
     </div>
