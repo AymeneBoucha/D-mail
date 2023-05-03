@@ -143,7 +143,7 @@ const Admin = () => {
                             }}
                           >
                             
-                            <MdDelete className="w-10"/>
+                            <MdDelete className="w-10" />
                           
                           </button>
                           <button

@@ -14,7 +14,7 @@ import Navbar from '../Components/NavBar';
 import axios from "axios";
 
 
-const Inbox = () => {
+const Messages = () => {
  
   const [messages, setMessages] = useState([]);
   const [name, setName] = useState("");
@@ -111,102 +111,15 @@ const Inbox = () => {
     };
   }, []);
 
-  const buttons = [
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Inbox" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Sent" },
-     {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
-    },
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Spam" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
-    {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Favourites",
-    },
-  ];
-
+ 
   const [hoverIndex, setHoverIndex] = useState(null);
 
 
 
-  //IPFS Receiving Files -------------------------------------------
-
-  const getFileFromIPFS = async (hash) => {
-  try {
-    const res = await axios({
-      method: 'get',
-      url: `https://gateway.pinata.cloud/ipfs/QmXfYESXzZ8dAmcUYrpt4YAixXSPBDDYvzvt5ecdDbtPZ2`,
-      responseType: 'blob',
-     
-    });
-
-    console.log('File retrieved from IPFS:', res.data);
-
-    // Determine the file type based on the content type header
-    const contentType = res.headers['content-type'];
-    if (contentType && contentType.startsWith('image/')) {
-      // If the file is an image, display it
-      const imgUrl = URL.createObjectURL(res.data);
-      setImageUrl(imgUrl);
-      setFileUrl(null);
-    } else {
-      // For other file types, display a download link
-      const fileUrl = URL.createObjectURL(res.data);
-      setFileUrl(fileUrl);
-      setImageUrl(null);
-    }
-
-  } catch (error) {
-    console.log('Error retrieving file from IPFS:', error);
-  }
-};
-
 
 
   return (
-    <div className="p-0" style={{fontSize: '1.6rem'}}>
-      
-    <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
-      <div className="row">
-      <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
-      <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
-        <div style={{position: 'fixed', top: 60, left: 17,}}>
-          <div style={{ padding: '20px 10px', marginLeft: -15 }}>
-          <button className="btn btn-primary btn-orange btn-lg" style={{ backgroundColor: '#FB723F', borderRadius: '30px', height: 60 }} onClick={handleToggleSendMessage}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <BsPencilSquare className="w-10 h-10 mr-2"/>
-              <p style={{fontSize:'1.2em',}} className="text-white m-0">New Message</p>
-            </div>
-          </button>
-          </div>
-
-          <div>
-            <button onClick={getFileFromIPFS}>
-              Get file
-            </button>
-            {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
-            {fileUrl && <a href={fileUrl} download>Download file</a>}
-
-          </div>
-
-
-
-
-          <div className="pl-6 pt-4 flex items-center space-x-6">
-              {buttons.map((button) => (
-                <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-                  <div className="flex items-center" >
-                    {button.icon}
-                    <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-                    
-                  </div>
-                </div>
-              ))}
-          </div>
-          </div>
-        </div>
-      </div>
+   
         <div className="col-md-12" style={{ marginTop: '-80px', marginLeft: 250 }}>
       {name && (
         <div>
@@ -260,11 +173,13 @@ const Inbox = () => {
                   >
                     <div>
                       <div className="row">
+                        {/* message header ----------*/}
                         <div className="col-md-12">
                           <strong>From :</strong> {senderEmails[message.sender]}
                           <br/>
                           <strong>To : </strong>{receiverEmails[message.receiver]}
                         </div>
+                        {/* message content */}
                         <div className="col-md-12">
                         <strong>{message.subject}</strong>
                         <br/>
@@ -318,17 +233,12 @@ const Inbox = () => {
                 ))}
               </ul>
             </div>
-          
-            <div className="col-md-12">
-              {showSendMessage && <SendMessage onSendMessage={handleSendMessage} />}
-            </div>
           </div>
         </div>
       )}
         </div>
-    </div>
-    </div>
+   
   );
 }
 
-export default Inbox;
+export default Messages;

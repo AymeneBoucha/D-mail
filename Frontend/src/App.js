@@ -14,6 +14,7 @@ import {
 import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
+import Messages from "./Components/Messages";
 function App() {
   const [name, setName] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
@@ -40,6 +41,7 @@ function App() {
       <>
         
         <Route path="/sendmsg" element={<SendMessage />} />
+        <Route path="/messages" element={<Messages />} />
       </>
     ) : (
       <Route path="/login" element={<Login />} />
