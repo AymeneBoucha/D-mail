@@ -18,6 +18,7 @@ contract Chat {
         string message;
         uint256 timestamp;
         bool read;
+        string fileHash;
     }
 
     
@@ -116,13 +117,14 @@ contract Chat {
     //event MessageSent(address indexed sender, address indexed receiver, bytes32 encryptedMessage);
 
     // Send message function
-    function sendMessage(address receiver, string calldata subject, string calldata message) external {
+    function sendMessage(address receiver, string calldata subject, string calldata message,string calldata fileHash) external {
+       
         require(
             checkUserExists(msg.sender) == true,
             "You must have an account"
         );
         require(checkUserExists(receiver) == true, "Recipient does not exist");
-        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false);
+        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false,fileHash);
         messages.push(message);
         //emit MessageSent(msg.sender, receiver, messageHash);
         }

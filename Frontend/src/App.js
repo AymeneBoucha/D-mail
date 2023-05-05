@@ -15,13 +15,14 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 import Messages from "./Components/Messages";
+import { MY_CONTRACT_ADDRESS } from "./contractAddresses";
 function App() {
   const [name, setName] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
  const [connected,setConnected]=useState("");
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   
-  const contractAddress = '0x888980dF40840Ee423Db5699f51B5Da61c333ec8';
+  const contractAddress = MY_CONTRACT_ADDRESS;
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
   async function connectWallet() {

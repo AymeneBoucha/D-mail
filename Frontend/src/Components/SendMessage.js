@@ -1,11 +1,25 @@
 import { ethers } from "ethers";
 import { useState } from "react";
 import ChatContract from "../Chat.sol/Chat.json";
+import axios from "axios";
+
+import React from 'react';
+import { Home } from '@mui/icons-material';
+
+import { MY_CONTRACT_ADDRESS } from "../contractAddresses";
+
+
+
+
 
 const SendMessage = () => {
+
+  const [fileImg, setFileImg] = useState(null);
+
   const [receiver, setreceiver] = useState("");
   const [emailReceiver, setEmailReceiver] = useState("");
   const [subject, setSubject] = useState("");
+  const [buffer, setBuffer] = useState("");
   const [attachment, setAttachment] = useState("");
   const [receiverName, setreceiverName] = useState("");
   const [body, setBody] = useState("");
@@ -15,11 +29,9 @@ const SendMessage = () => {
   const [link, setLink] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
 
-  
-  
   const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-  const contractAddress = "0x888980dF40840Ee423Db5699f51B5Da61c333ec8";
+  const contractAddress = MY_CONTRACT_ADDRESS;
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(
     contractAddress,
@@ -29,21 +41,57 @@ const SendMessage = () => {
 
   async function sendMessage(event) {
     event.preventDefault();
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    const result = await chatContract.getName(accounts[0]);
-    setWalletAddressName(result);
-    setWalletAddress(accounts[0]);
-    const address = await chatContract.getAddress(emailReceiver);
-    const tx = await chatContract.sendMessage(address, subject, body);
-    console.log(tx.hash);
+   
+    // code to send file to ipfs
+    if (fileImg) {
+      try {
 
-    setIsExecuted(true);
-    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+          const formData = new FormData();
+          formData.append("file", fileImg);
+
+          console.log("before axios");
+          const resFile = await axios({
+            method: "post",
+            url: "https://api.pinata.cloud/pinning/pinFileToIPFS",
+            data: formData,
+            headers: {
+                'pinata_api_key': '34179c3aab28e71df399',
+                'pinata_secret_api_key': '17d8bdffc44b359f48d4b1bddbe2de7c0bb760ac47b2e2e31a98a281cda0e04f',
+                "Content-Type": "multipart/form-data"
+            },
+        });
+          console.log(fileImg);
+          console.log("after axios");
+
+
+          const ImgHash = `${resFile.data.IpfsHash}`;
+       console.log(ImgHash); 
+      //Take a look at your Pinata Pinned section, you will see a new file added to you list.   
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const result = await chatContract.getName(accounts[0]);
+      setWalletAddressName(result);
+      setWalletAddress(accounts[0]);
+      const address = await chatContract.getAddress(emailReceiver);
+      const tx = await chatContract.sendMessage(address, subject, body,ImgHash);
+      console.log(tx.hash);
+  
+      setIsExecuted(true);
+      setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+  
+
+
+      } catch (error) {
+          console.log("Error sending File to IPFS: ")
+          console.log(error)
+      }
   }
 
 
+  }
+
+  
 
 
   return (
@@ -99,41 +147,26 @@ const SendMessage = () => {
           />
         </div>
         <div className="form-group d-flex justify-content-between align-items-center">
-          <div className="form-group ml-4 mb-2">
-            <input
-              type="file"
-              id="attachment"
-              multiple
-              onChange={(e) => setAttachment(e.target.files[0])}
-              style={{ display: "none" }}
-            />
-          {/*  <label
-              htmlFor="attachment"
-              style={{
-                display: "inline-block",
-                width: "100%",
-                height: "100%",
-                cursor: "pointer",
-              }}
-            >
-              <img
-                src="/add_file.png"
-                alt="Add file"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  transition: "opacity 0.2s ease-in-out",
-                }}
-                className="hover:opacity-80"
-              />
-            </label>
-            */}
-            <form /*onSubmit={handleSubmit}*/>
-              <input type="file"/* onChange={captureFile}*//>
-                <input type="submit" />
-            </form>
-          </div>
+
+        <div className="btn-group d-flex align-items-center">
+          <label htmlFor="upload-button" className="btn btn-secondary btn-sm rounded-end flex-grow-1" style={{
+                backgroundColor: "#FB723F",
+                marginLeft: "1.4px",
+                border: "none",
+                color: "#fff",
+                borderRadius: "8px 8px 8px 8px",
+                transition: "all 0.3s ease",
+              }}>
+                <input id="upload-button" type="file" onChange={(e) =>setFileImg(e.target.files[0])} style={{display: 'none'}} />
+                <img src="add_file.png" alt="send" style={{ pointerEvents: "none", maxWidth: "80%" }} />
+          </label>
+          
+        </div>
+
+ 
           <div className="btn-group d-flex align-items-center">
+
+
             <button
               type="submit"
               className="btn btn-primary btn-sm rounded-start flex-grow-1"

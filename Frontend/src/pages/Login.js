@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { useState, useEffect } from 'react';
 import ChatContract from '../Chat.sol/Chat.json';
+import { MY_CONTRACT_ADDRESS } from "../contractAddresses";
 
 function Login() {
   const [name, setName] = useState('');
@@ -9,7 +10,7 @@ function Login() {
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-  const contractAddress = '0x888980dF40840Ee423Db5699f51B5Da61c333ec8';
+  const contractAddress = MY_CONTRACT_ADDRESS;
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
 

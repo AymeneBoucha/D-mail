@@ -8,6 +8,8 @@ import { FaArchive, FaInbox, FaStar, FaUser,FaRegUser } from "react-icons/fa";
 import {HiUsers} from  "react-icons/hi";
 import {MdGroups,MdManageAccounts,MdDelete,MdOutlineMail,MdEdit} from "react-icons/md";
 import Navbar from '../Components/NavBar';
+import { MY_CONTRACT_ADDRESS } from "../contractAddresses";
+
 const Admin = () => {
   const [users, setUsers] = useState([]);
   const [name, setName] = useState("");
@@ -16,7 +18,7 @@ const Admin = () => {
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-  const contractAddress = '0x483edBed6D470247C802C5ECC9cf77E81c689917';
+  const contractAddress = MY_CONTRACT_ADDRESS;
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
 
