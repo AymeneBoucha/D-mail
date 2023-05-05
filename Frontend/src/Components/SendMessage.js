@@ -1,334 +1,190 @@
-import React, { useState, useEffect } from 'react';
-import SendMessage from '../Components/SendMessage';
-import { ethers } from 'ethers';
-import ChatContract from '../Chat.sol/Chat.json';
-import '../assets/Inbox.css';
-import { Button, ListGroup } from 'react-bootstrap';
-import { BsPencilSquare } from "react-icons/bs";
- import { FaInbox, FaStar } from "react-icons/fa";
-import { MdNotificationImportant } from "react-icons/md";
-import { MdLabelImportant } from "react-icons/md";
-// Importation de la Navbar et left bar
-import Navbar from '../Components/NavBar';
-//import Leftbar from './LeftBar';
-import axios from "axios";
+import { ethers } from "ethers";
+import { useState } from "react";
+import ChatContract from "../Chat.sol/Chat.json";
 
+const SendMessage = () => {
+  const [receiver, setreceiver] = useState("");
+  const [emailReceiver, setEmailReceiver] = useState("");
+  const [subject, setSubject] = useState("");
+  const [attachment, setAttachment] = useState("");
+  const [receiverName, setreceiverName] = useState("");
+  const [body, setBody] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [walletAddressName, setWalletAddressName] = useState("");
+  const [isExecuted, setIsExecuted] = useState(false);
+  const [link, setLink] = useState("");
+  const [isMinimized, setIsMinimized] = useState(false);
 
-const Inbox = () => {
- 
-  const [messages, setMessages] = useState([]);
-  const [name, setName] = useState("");
-  const [senderEmails, setSenderEmails] = useState({});
-  const [receiverEmails, setReceiverEmails] = useState({});
-  const [showSendMessage, setShowSendMessage] = useState(false);
- 
+  
+  
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
-  const contractAddress = '0x888980dF40840Ee423Db5699f51B5Da61c333ec8';
+
+  const contractAddress = "0x888980dF40840Ee423Db5699f51B5Da61c333ec8";
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
-  
+  const chatContract = new ethers.Contract(
+    contractAddress,
+    ChatContract.abi,
+    signer
+  );
 
-  const [imageUrl, setImageUrl] = useState(null);
-  const [fileUrl, setFileUrl] = useState(null);
-
-
-  const handleSendMessage = (message) => {
-    const newMessage = {
-      sender:message.sender,
-      receiver: message.receiver,
-      subject: message.subject,
-      body: message.message,
-      timestamp: message.timestamp,
-      read: message.read
-    };
-    setMessages([...messages, newMessage]);
-    setShowSendMessage(false);
-    console.log('messages',messages);
-  };
-
-  const handleToggleSendMessage = () => {
-    setShowSendMessage(!showSendMessage);
-  };
-
-  async function getName() {
+  async function sendMessage(event) {
+    event.preventDefault();
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
     const result = await chatContract.getName(accounts[0]);
-    setName(result);
-   
-    const messagesReceived = await chatContract.MessageReceived(result);
-    const messagesSent = await chatContract.MessageSent(result);
+    setWalletAddressName(result);
+    setWalletAddress(accounts[0]);
+    const address = await chatContract.getAddress(emailReceiver);
+    const tx = await chatContract.sendMessage(address, subject, body);
+    console.log(tx.hash);
 
-    const allMessages = [...messagesSent, ...messagesReceived];
-    allMessages.sort((a, b) => b.timestamp - a.timestamp);
-
-    setMessages(allMessages);
-
-    const senderEmails = {};
-    const receiverEmails = {};
-    allMessages.forEach(message => {
-      if (!(message.sender in senderEmails)) {
-        getEmail(message.sender).then(email => setSenderEmails(prevState => ({
-          ...prevState,
-          [message.sender]: email
-        })));
-      }
-      if (!(message.receiver in receiverEmails)) {
-        getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
-          ...prevState,
-          [message.receiver]: email
-        })));
-      }
-    });
-  }
-   
-  function formatTimestamp(timestamp) {
-    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
-    const year = date.getFullYear();
-    const month = ("0" + (date.getMonth() + 1)).slice(-2); // Add leading zero to month
-    const day = ("0" + date.getDate()).slice(-2); // Add leading zero to day
-    const hours = ("0" + date.getHours()).slice(-2); // Add leading zero to hours
-    const minutes = ("0" + date.getMinutes()).slice(-2); // Add leading zero to minutes
-    const seconds = ("0" + date.getSeconds()).slice(-2); // Add leading zero to seconds
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    setIsExecuted(true);
+    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
   }
 
-  async function getEmail(adresse) {
-    const result = await chatContract.getEmail(adresse);
-    return result;
-  }
-
-  useEffect(() => {
-    getName();
-    // Lock horizontal scroll
-    document.body.style.overflowX = 'hidden';
-
-    // Clean up on unmount
-    return () => {
-      document.body.style.overflowX = 'auto';
-    };
-  }, []);
-
-  const buttons = [
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Inbox" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Sent" },
-     {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
-    },
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Spam" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
-    {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Favourites",
-    },
-  ];
-
-  const [hoverIndex, setHoverIndex] = useState(null);
-
-
-
-  //IPFS Receiving Files -------------------------------------------
-
-  const getFileFromIPFS = async (hash) => {
-  try {
-    const res = await axios({
-      method: 'get',
-      url: `https://gateway.pinata.cloud/ipfs/QmXfYESXzZ8dAmcUYrpt4YAixXSPBDDYvzvt5ecdDbtPZ2`,
-      responseType: 'blob',
-     
-    });
-
-    console.log('File retrieved from IPFS:', res.data);
-
-    // Determine the file type based on the content type header
-    const contentType = res.headers['content-type'];
-    if (contentType && contentType.startsWith('image/')) {
-      // If the file is an image, display it
-      const imgUrl = URL.createObjectURL(res.data);
-      setImageUrl(imgUrl);
-      setFileUrl(null);
-    } else {
-      // For other file types, display a download link
-      const fileUrl = URL.createObjectURL(res.data);
-      setFileUrl(fileUrl);
-      setImageUrl(null);
-    }
-
-  } catch (error) {
-    console.log('Error retrieving file from IPFS:', error);
-  }
-};
 
 
 
   return (
-    <div className="p-0" style={{fontSize: '1.6rem'}}>
-      
-    <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
-      <div className="row">
-      <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
-      <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
-        <div style={{position: 'fixed', top: 60, left: 17,}}>
-          <div style={{ padding: '20px 10px', marginLeft: -15 }}>
-          <button className="btn btn-primary btn-orange btn-lg" style={{ backgroundColor: '#FB723F', borderRadius: '30px', height: 60 }} onClick={handleToggleSendMessage}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <BsPencilSquare className="w-10 h-10 mr-2"/>
-              <p style={{fontSize:'1.2em',}} className="text-white m-0">New Message</p>
-            </div>
-          </button>
-          </div>
-
-          <div>
-            <button onClick={getFileFromIPFS}>
-              Get file
-            </button>
-            {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
-            {fileUrl && <a href={fileUrl} download>Download file</a>}
-
-          </div>
-
-
-
-
-          <div className="pl-6 pt-4 flex items-center space-x-6">
-              {buttons.map((button) => (
-                <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-                  <div className="flex items-center" >
-                    {button.icon}
-                    <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-                    
-                  </div>
-                </div>
-              ))}
-          </div>
-          </div>
+    <div className="card-body p-0 text-center m-2" style={{ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
+  <div className="card-header bg-dark text-white" style={{borderRadius: "8px 8px 0 0", cursor: "pointer"}} onClick={() => setIsMinimized(!isMinimized)}>
+  <h5 className="mt-0">New Message</h5>
+</div>
+<div className="send-message card p-0" style={{height: isMinimized ? "3px" : "auto"}}>
+      <form className="send-message card p-3">
+        <div className="form-group">
+          <label htmlFor="emailReceiver" className="sr-only">
+            To:
+          </label>
+          <input
+            type="text"
+            className="form-control form-control-lg mb-1"
+            id="emailReceiver"
+            placeholder="To"
+            style={{ border: "none" }}
+            value={emailReceiver}
+            onChange={(e) => setEmailReceiver(e.target.value)}
+            required
+          />
         </div>
-      </div>
-        <div className="col-md-12" style={{ marginTop: '-80px', marginLeft: 250 }}>
-      {name && (
-        <div>
-          {/* <h1>Bienvenue, {name}!</h1> */}
-          <div className="row">
-            {/*Inbox :*/}
-            <div className="col-md-12">
-            {/* Bienvenue------------- */}
-              <div className="d-flex justify-content-between align-items-center" style={{padding: 10, width: "calc(98% - 250px)", borderBottom: "1px solid #ccc", marginTop: -35}}>
-                    <div className="m-2 d-flex align-items-center font-medium fs-4 gap-3" >
-                      <h3>Bienvenue, {name} !</h3>
-                    </div>
-                    <div className="mt-3 d-flex align-items-center font-medium gap-3">
-                      <img src="./config.png" width={30} height={30} />
-                    </div>
-              </div>
-             {/* Mes Messages ------------- */} 
-              <h1  style={{ marginTop: 10, marginBottom: 20, marginLeft: -270 , float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, fontSize: 30}}>Mes Messages</h1>
-              <ul
+        <div className="form-group">
+          <label htmlFor="subject" className="sr-only">
+            Title:
+          </label>
+          <input
+            type="text"
+            className="form-control mb-1"
+            id="subject"
+            placeholder="Subject"
+            style={{ border: "none" }}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="body" className="sr-only">
+            Message:
+          </label>
+          <textarea
+            className="form-control mb-1"
+            id="body"
+            rows="5"
+            placeholder="Compose email"
+            style={{ border: "none" }}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            required
+          />
+        </div>
+        <div className="form-group d-flex justify-content-between align-items-center">
+          <div className="form-group ml-4 mb-2">
+            <input
+              type="file"
+              id="attachment"
+              multiple
+              onChange={(e) => setAttachment(e.target.files[0])}
+              style={{ display: "none" }}
+            />
+          {/*  <label
+              htmlFor="attachment"
+              style={{
+                display: "inline-block",
+                width: "100%",
+                height: "100%",
+                cursor: "pointer",
+              }}
+            >
+              <img
+                src="/add_file.png"
+                alt="Add file"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0px",
-                  padding: "0",
-                  width: "calc(98% - 250px)",
-                  backgroundColor: "ghostwhite",
+                  width: "100%",
+                  height: "100%",
+                  transition: "opacity 0.2s ease-in-out",
                 }}
-              >
-                <li className="d-flex justify-content-between align-items-center" style={{padding: 10, borderBottom: "1px solid #ccc",}}>
-                  <div className="m-2 d-flex align-items-center font-medium fs-4 gap-3">
-                    <img src="./logo.png" width={30} height={30} /><p className="m-0" style={{fontSize: '1.7rem' }}>inbox</p>
-                  </div>
-                  <div className="m-2 d-flex align-items-center font-medium gap-3">
-                    <p className="m-0" style={{fontSize: '1.6rem' }}>1-50 of 354</p>
-                  </div>
-                </li>
-                {messages.map((message, index) => (
-                  <li
-                    key={index}
-                    onMouseEnter={() => setHoverIndex(index)}
-                    onMouseLeave={() => setHoverIndex(null)}
-                    style={{
-                      borderBottom: "1px solid #ccc",
-                      width: "100%",
-                      padding: "15px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      backgroundColor: message.read ? "white" : "ghostwhite",
-                    }}
-                  >
-                    <div>
-                      <div className="row">
-                        <div className="col-md-12">
-                          <strong>From :</strong> {senderEmails[message.sender]}
-                          <br/>
-                          <strong>To : </strong>{receiverEmails[message.receiver]}
-                        </div>
-                        <div className="col-md-12">
-                        <strong>{message.subject}</strong>
-                        <br/>
-                          <strong>Message : </strong>
-                          {message.message.length > 100
-                            ? `${message.message.substring(0, 100)}...`
-                            : message.message}
-                            <br/>
-                        </div>
-                        
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
-                      {hoverIndex === index ? (
-                        <>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              marginRight: "10px",
-                            }}
-                          >
-                            <img src="./reply.png" width={20} height={20} />
-                          </button>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                              marginRight: "10px",
-                            }}
-                          >
-                            <img src="./reply2.png" width={20} height={20} />
-                          </button>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <img src="./delete.png" width={20} height={20} />
-                          </button>
-                        </>
-                      ) : (
-                        <p className="d-flex justify-content-center" style={{float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1}}>{formatTimestamp(message.timestamp.toNumber())}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          
-            <div className="col-md-12">
-              {showSendMessage && <SendMessage onSendMessage={handleSendMessage} />}
-            </div>
+                className="hover:opacity-80"
+              />
+            </label>
+            */}
+            <form /*onSubmit={handleSubmit}*/>
+              <input type="file"/* onChange={captureFile}*//>
+                <input type="submit" />
+            </form>
+          </div>
+          <div className="btn-group d-flex align-items-center">
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm rounded-start flex-grow-1"
+              style={{
+                backgroundColor: "#FB723F",
+                border: "none",
+                color: "#fff",
+                borderRadius: "8px 0 0 8px",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#F64A0B")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FB723F")}
+            >
+              <img
+                src="timer.png"
+                alt="program send"
+                style={{ pointerEvents: "none", maxWidth: "100%" }}
+              />
+            </button>
+            <button
+              type="submit"
+              className="btn btn-secondary btn-sm rounded-end flex-grow-1"
+              style={{
+                backgroundColor: "#FB723F",
+                marginLeft: "1.4px",
+                border: "none",
+                color: "#fff",
+                borderRadius: "0 8px 8px 0",
+                transition: "all 0.3s ease",
+              }}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#F64A0B")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FB723F")}
+              onClick={sendMessage}
+            >
+              <img
+                src="send.png"
+                alt="send"
+                style={{ pointerEvents: "none", maxWidth: "100%" }}
+              />
+            </button>
           </div>
         </div>
+      </form>
+      </div>
+      {isExecuted && (
+        <a href={link} target="_blank" rel="noopener noreferrer">
+          View transaction in Mumbai.polygonscan
+        </a>
       )}
-        </div>
-    </div>
     </div>
   );
-}
+};
 
-export default Inbox;
+export default SendMessage;
