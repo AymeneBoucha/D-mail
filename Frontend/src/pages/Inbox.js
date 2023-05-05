@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SendMessage from '../Components/SendMessage';
 import Messages from '../Components/Messages';
-import Messages from '../Components/Messages';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import '../assets/Inbox.css';
@@ -13,14 +12,12 @@ import { MdLabelImportant } from "react-icons/md";
 // Importation de la Navbar et left bar
 import Navbar from '../Components/NavBar';
 //import Leftbar from './LeftBar';
-import axios from "axios";
 
 import axios from "axios";
 
 
 import { MY_CONTRACT_ADDRESS } from "../contractAddresses";
 const Inbox = () => {
- 
   const [messages, setMessages] = useState([]);
   const [showSendMessage, setShowSendMessage] = useState(false);
   const handleSendMessage = (message) => {
@@ -61,7 +58,7 @@ const Inbox = () => {
   return (
     <div className="p-0" style={{fontSize: '1.6rem'}}>
       
-    <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
+      <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
       <div className="row">
       <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
       <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
@@ -74,27 +71,17 @@ const Inbox = () => {
             </div>
           </button>
           </div>
-
-          <div>
-            <button onClick={getFileFromIPFS}>
-              Get file
-            </button>
-            {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
-            {fileUrl && <a href={fileUrl} download>Download file</a>}
-
-          </div>
-
           <div className="pl-6 pt-4 flex items-center space-x-6">
-              {buttons.map((button) => (
-                <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-                  <div className="flex items-center" >
-                    {button.icon}
-                    <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-                    
-                  </div>
-                </div>
-              ))}
+      {buttons.map((button) => (
+        <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
+          <div className="flex items-center" >
+            {button.icon}
+            <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
+            
           </div>
+        </div>
+      ))}
+    </div>
           </div>
         </div>
     </div>
