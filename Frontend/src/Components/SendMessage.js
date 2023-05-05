@@ -74,7 +74,7 @@ const SendMessage = () => {
       setWalletAddressName(result);
       setWalletAddress(accounts[0]);
       const address = await chatContract.getAddress(emailReceiver);
-      const tx = await chatContract.sendMessage(address, subject, body,ImgHash);
+      const tx = await chatContract.sendMessage(address, subject, body,`${resFile.data.IpfsHash}`);
       console.log(tx.hash);
   
       setIsExecuted(true);
