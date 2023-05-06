@@ -11,8 +11,8 @@ contract Chat {
         bool isAdmin;
     }
     struct Secure{
-        bytes32 password;
         bytes32 seed;
+        bytes32 password;
         bytes pubKey; 
     }
     
@@ -135,6 +135,11 @@ contract Chat {
 
     function verifyPassword(address sender, bytes32 password) public view returns(bool) {
         require(Keys[sender].password == password, "Invalid Password");
+        return true;
+    }
+
+    function verifySeed(address sender, bytes32 seed) public view returns(bool) {
+        require(Keys[sender].seed == seed, "Invalid Seed");
         return true;
     }
 

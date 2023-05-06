@@ -59,7 +59,7 @@ const Inbox = () => {
 
    async function getSenderPriKey(address){
     const email = await chatContract.getEmail(address);
-    const priKey = sessionStorage.getItem('PrivateKey'+email);
+    const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
    }
 
@@ -90,9 +90,9 @@ const Inbox = () => {
     const DecryptedMessagesSent = [];
     
     for (let i = 0; i < messagesReceived.length; i++){
-      const pubKey = await getRecieverPubKey(messagesReceived[i].sender);
-      console.log("get pubKey : " + pubKey);
-      const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKey, MyPriKey);
+      const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
+      console.log("get pubKeyR : " + pubKeyR);
+      const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
       console.log("decryptedMessage : " + decryptedMessage);
       const newMessage = {
         ...messagesReceived[i],
@@ -102,14 +102,15 @@ const Inbox = () => {
     }
 
     for (let i = 0; i < messagesSent.length; i++){
-      const pubKey = await getRecieverPubKey(messagesReceived[i].receiver);
-      console.log("get pubKey : " + pubKey);
-      const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKey, MyPriKey);
+      const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
+      console.log("get pubKeyS : " + pubKeyS);
+      const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
       console.log("decryptedMessage : " + decryptedMessage);
       const newMessage = {
         ...messagesSent[i],
         message: decryptedMessage,
       };
+      console.log(newMessage);
       DecryptedMessagesReceived.push(newMessage);
     }
     

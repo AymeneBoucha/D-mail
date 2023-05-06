@@ -25,7 +25,13 @@ function NameForum() {
   
 
   async function createUserId() {
+    try{
     await chatContract.createUserId(email, userId);
+    window.location.href = "/create";
+    }
+    catch(e) {
+      alert("Invalid Email or ID !");
+    }
   }
  
 

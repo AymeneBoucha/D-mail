@@ -28,7 +28,6 @@ const SendMessage = () => {
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
 
-  //const contractAddress = "0xa41102ce0fDA55beD090cEAa803cAf4538c945c1";
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(
     contractAddress,
@@ -48,10 +47,6 @@ const SendMessage = () => {
      console.log("ciphertext.toString('base64') :" + ciphertext.toString('base64'));
      const hexCipher = ciphertext.toString('base64').toString(16);
      console.log("hexCipher : " + hexCipher);
-     /*const paddedHexCipher = hexCipher.padStart(64, '0');
-     console.log("paddedHexCipher" + paddedHexCipher);
-     const bytes32Cipher = Buffer.from(paddedHexCipher, 'hex');
-     console.log("bytes3é",bytes32Cipher);*/
      return hexCipher;
    };
  
@@ -78,7 +73,7 @@ const SendMessage = () => {
 
    async function getSenderPriKey(address){
     const email = await chatContract.getEmail(address);
-    const priKey = sessionStorage.getItem('PrivateKey'+email);
+    const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
    }
 

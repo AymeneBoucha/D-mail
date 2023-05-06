@@ -15,7 +15,7 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddress =  '0x43B36B139E3F9c5ABB34ae15373058F2eA69187e';
+const contractAddress =  '0x3E49C07527c32202fa8A3759C7a2E60eE884f364';
 export { contractAddress };
 
 function App() {
@@ -40,14 +40,12 @@ function App() {
      <Router>
       <Routes>
       <Route path="/inbox" element={<Inbox />} />
-      {connected ? (
-      <>
+
         
         <Route path="/sendmsg" element={<SendMessage />} />
-      </>
-    ) : (
-      <Route path="/login" element={<Login />} />
-    )}
+
+      <Route path="/" element={<Login />} />
+
     <Route path="/create" element={<ConnectWallet />} />
     <Route path="/name" element={<NameForum />} />
     <Route path="/admin" element={<Admin/>} />

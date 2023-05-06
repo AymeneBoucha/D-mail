@@ -29,8 +29,13 @@ const NavBar = () => {
     setWalletAddress(accounts[0]);
   }
 
-function logout() {
-      window.location.href = '/login';
+async function logout() {
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const result = await chatContract.getEmail(accounts[0]);
+  sessionStorage.removeItem("PrivateKey."+result);
+      window.location.href = '/';
 
   }
 
@@ -64,7 +69,7 @@ function logout() {
             <div style={{ color: 'white' }}>{walletAddressName}</div>
             
           </div>
-          <Button variant="outline-light" className="px-2 ml-5" style={{ backgroundColor: '#1F2229' }}>
+          <Button variant="outline-light" className="px-2 ml-5" style={{ backgroundColor: '#1F2229' }} onClick={logout}>
             <ExitToApp style={{ color: '#FB723F' }} />
           </Button>
         </div>
