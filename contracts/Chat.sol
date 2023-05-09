@@ -23,6 +23,7 @@ contract Chat {
         string message;
         uint256 timestamp;
         bool read;
+        string fileHash;
     }
 
     
@@ -144,13 +145,13 @@ contract Chat {
     }
 
     // Send message function
-    function sendMessage(address receiver, string calldata subject, string memory message) external {
+    function sendMessage(address receiver, string calldata subject, string memory message, string memory fileHash) external {
         require(
             checkUserExists(msg.sender) == true,
             "You must have an account"
         );
         require(checkUserExists(receiver) == true, "Recipient does not exist");
-        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false);
+        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false, fileHash);
         messages.push(message);
         //emit MessageSent(msg.sender, receiver, messageHash);
         }
@@ -241,36 +242,5 @@ function editUser(address walletAddress, string memory name, string memory email
     usersByName[name] = walletAddress;
     usersByEmail[email] = walletAddress;
 }
-
-    // Get sent messages function
-    /*function getSentMessages() public view returns (Message[] memory) {
-        return sentMessages[msg.sender];
-    }
-    
-    // Get received messages function
-    function getReceivedMessages() public view returns (Message[] memory) {
-        return receivedMessages[msg.sender];
-    }*/
-    
-    // Decrypt and read message function
-    /*function readMessage(uint256 _index, bytes32 _key, RSA.PrivateKey memory _privateKey) public {
-        Message memory message = receivedMessages[msg.sender][_index];
-        require(message.receiver == msg.sender, "You are not the intended recipient of this message.");
-        
-        bytes memory decryptedKey = decryptMessageRSA(message.encryptedKey, _privateKey);
-        bytes32 decryptedKey32 = bytesToBytes32(decryptedKey);
-        
-        string memory decryptedMessage = decryptMessage(message.encryptedMessage, decryptedKey32);
-        
-        emit MessageReceived(message.sender, message.receiver, message.encryptedMessage);
-    }
-    
-    // Utility function to convert bytes to bytes32
-    function bytesToBytes32(bytes memory _bytes) private pure returns (bytes32 result) {
-    	require(_bytes.length >= 32, "Byte array must be at least 32 bytes long.");
-    	assembly {
-        result := mload(add(_bytes, 32))
-    	}
-   }*/
 
 }
