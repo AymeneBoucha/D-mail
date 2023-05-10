@@ -177,7 +177,7 @@ const SendMessage = () => {
     if(receiversAddresses.length == 1){
       const pubKey = await getRecieverPubKey(receiversAddresses[0]);
       const encryptedMessage = encryptMessage(body, pubKey, priKey);
-      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, emailReceiver);
+      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, '', emailReceiver);
     }else{
       const receiversAddresses = await getReceiversAddresses(emailReceiver);
       const pubKeys = await getRecieversPubKey(receiversAddresses)

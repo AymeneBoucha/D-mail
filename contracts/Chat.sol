@@ -3,13 +3,20 @@ pragma solidity ^0.8.9;
 
 
 contract Chat {
-    
+
     struct User {
         string name;
         string email;
         bool exists;
         address walletAddress;
         bool isAdmin;
+    }
+
+    enum DeletionStatus {
+        NotDeleted,
+        DeletedBySender,
+        DeletedByReceiver,
+        DeletedBoth
     }
     struct Secure{
         bytes32 seed;
@@ -18,6 +25,7 @@ contract Chat {
     }
     
     struct Message {
+        uint256 id;
         address sender;
         address receiver;
         string subject;
@@ -26,7 +34,10 @@ contract Chat {
         bool read;
         string fileHash;
         string receiversGroup;
+        DeletionStatus deleted;
     }
+
+    uint256 messageCount;
 
     mapping(bytes32 => string) public IDs;
     mapping(address => Secure) public Keys;
@@ -154,9 +165,10 @@ contract Chat {
         require(checkUserExists(receiver) == true, "Recipient does not exist");
         //address[] memory receivers = new address[](1);
         //receivers[0] = receiver;
-        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false, fileHash, receiverGroup);
+        Message memory message = Message(messageCount, msg.sender, receiver, subject, message, block.timestamp, false, fileHash, receiverGroup, DeletionStatus.NotDeleted);
         messages.push(message);
         //emit MessageSent(msg.sender, receiver, messageHash);
+        messageCount++;
         }        
 
         function sendMessageToGroup(address[] memory receiver, string calldata subject, string []memory message, string memory fileHash, string memory emailGroup) external {
@@ -166,12 +178,35 @@ contract Chat {
         );
         for(uint i = 0; i<receiver.length; i++){
             require(checkUserExists(receiver[i]) == true, "Recipient does not exist");
-            Message memory message = Message(msg.sender, receiver[i], subject, message[i], block.timestamp, false, fileHash, emailGroup);
+            Message memory message = Message(messageCount, msg.sender, receiver[i], subject, message[i], block.timestamp, false, fileHash, emailGroup,DeletionStatus.NotDeleted);
         messages.push(message);
+        messageCount++;
         }
         
         //emit MessageSent(msg.sender, receiver, messageHash);
         }      
+
+    function deleteMessage(address walletAddress, uint256 id) public {
+        require(checkUserExists(walletAddress), "User with given address does not exist.");
+        Message storage message = messages[id];
+        //Message storage message = getMessageById(id);
+        if(message.sender == walletAddress){
+            if(message.deleted==DeletionStatus.DeletedByReceiver){
+                message.deleted = DeletionStatus.DeletedBoth;
+            }
+            else{
+                message.deleted = DeletionStatus.DeletedBySender;
+            }
+        }
+        if(message.receiver == walletAddress){
+            if(message.deleted==DeletionStatus.DeletedBySender){
+                message.deleted = DeletionStatus.DeletedBoth;
+            }
+            else{
+                message.deleted =  DeletionStatus.DeletedByReceiver;
+            }
+        }
+    }
 
     function getAddress(string memory email) public view returns (address) {
         return usersByEmail[email];
@@ -205,14 +240,14 @@ contract Chat {
         function MessageSent(string memory email) public view returns (Message[] memory) {
         uint count = 0;
         for (uint i = 0; i < messages.length; i++) {
-            if (messages[i].sender == getAddress(email)) {
+            if ((messages[i].sender == getAddress(email)) && (messages[i].deleted != DeletionStatus.DeletedBySender) && (messages[i].deleted != DeletionStatus.DeletedBoth)) {
                 count++;
             }
         }
         Message[] memory messagesSent = new Message[](count);
         uint index = 0;
         for (uint i = 0; i < messages.length; i++) {
-            if (messages[i].sender == getAddress(email)) {
+            if ((messages[i].sender == getAddress(email)) && (messages[i].deleted != DeletionStatus.DeletedBySender) && (messages[i].deleted != DeletionStatus.DeletedBoth)) {
                 messagesSent[index] = messages[i];
                 index++;
             }
@@ -225,25 +260,21 @@ contract Chat {
     ) public view returns (Message[] memory) {  
         uint count = 0;
         for (uint i = 0; i < messages.length; i++) {
-            //for (uint j = 0; j < messages[i].receiver.length; j++){
-                if (messages[i].receiver == getAddress(email)) {
+            if ((messages[i].receiver == getAddress(email)) && (messages[i].deleted != DeletionStatus.DeletedByReceiver) && (messages[i].deleted != DeletionStatus.DeletedBoth)) {
                 count++;
-            //}
             }
-            
         }
         Message[] memory messagesRecieved = new Message[](count);
         uint index = 0;
         for (uint i = 0; i < messages.length; i++) {
-            //for (uint j = 0; j < messages[i].receiver.length; j++){
-            if (messages[i].receiver == getAddress(email)) {
+            if ((messages[i].receiver == getAddress(email)) && (messages[i].deleted != DeletionStatus.DeletedByReceiver) && (messages[i].deleted != DeletionStatus.DeletedBoth)) {
                 messagesRecieved[index] = messages[i];
                 index++;
-           // }
             }
         }
         return messagesRecieved;
     }
+
 
 
 

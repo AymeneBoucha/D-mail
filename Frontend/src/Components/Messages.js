@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import SendMessage from '../Components/SendMessage';
 import MessageDetails from './MessagesDetails';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
+import { BsArrowLeft  } from "react-icons/bs";
 import '../assets/Inbox.css';
-import { Button, ListGroup } from 'react-bootstrap';
-import { BsPencilSquare } from "react-icons/bs";
- import { FaInbox, FaStar } from "react-icons/fa";
-import { MdNotificationImportant } from "react-icons/md";
-import { MdLabelImportant } from "react-icons/md";
-import Navbar from '../Components/NavBar';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import {contractAddress} from "../App"
-import axios from "axios";
 const curve = new ec('secp256k1');
 
 
@@ -35,30 +28,44 @@ const Messages = () => {
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
 
+  const backToMessages = () => {
+    console.log("going back");
+    setShowMessage(false);
+    setCounter(0);
+    setSelectedMessage({});
+  };
+
+
+  async function DeleteMessage  (message) {
+
+    // console.log("message is: ", message);
+    // console.log("message id is: ", message.id)
+    //setDeletedMessage(message);
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    const address = accounts[0];
+    console.log("current user is: ", address)
+    const tx = await chatContract.deleteMessage(address, message.id);
+    console.log(tx.hash); 
+    return tx; 
+
+    
+   };
+   const handleDeleteMessage =(message)=> {
+
+    console.log("message is: ", message);
+    console.log("message id is: ", message.id)
+    //setDeletedMessage(message);
+    DeleteMessage(message);
+    
+   };
 
    const  handleSelectedMessage = (message) => {
 
     setSelectedMessage(message);
     
    };
-
-   const handleSendMessage = (message) => {
-    const newMessage = {
-      sender:message.sender,
-      receiver: message.receiver,
-      receiversGroup: message.receiversGroup,
-      subject: message.subject,
-      body: message.message,
-      timestamp: message.timestamp,
-      read: message.read
-    };
-    setMessages([...messages, newMessage]);
-    setShowSendMessage(false);
-  };
-
-  const handleToggleSendMessage = () => {
-    setShowSendMessage(!showSendMessage);
-  };
 
   async function getRecieverPubKey(address) {
     const pubKeyX = await chatContract.getRecieverPubKey(address);
@@ -140,7 +147,7 @@ const Messages = () => {
         message: decryptedMessage,
       };
       //console.log(newMessage);
-      DecryptedMessagesReceived.push(newMessage);
+      DecryptedMessagesSent.push(newMessage);
     }
     
     const keepUniqueMessages = (messages) => {
@@ -200,9 +207,6 @@ console.log(allMessages);
   useEffect(() => {
     getName();
 
-    messages.map((message, index) => (
-    console.log("message[0] : " ,message)
-    ));
     // Lock horizontal scroll
     document.body.style.overflowX = 'hidden';
     // Clean up on unmount
@@ -217,12 +221,23 @@ console.log(allMessages);
 
   return (
    
-    <div className="col-md-12" style={{ marginTop: '-80px', marginLeft: 250 }}>
+     <div className="col-md-12" style={{ marginTop: '-80px', marginLeft: 250 }}>
 
     {Email && (
     
 
       <div>
+       { showMessage && (
+              <button 
+              className="btn btn-primary btn-orange btn-lg" 
+              style={{ backgroundColor: 'white', color: '#FB723F', borderRadius: '30px', border: '2px solid #FB723F' }} 
+              onClick={backToMessages}>         
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <BsArrowLeft  className="w-10 h-10 mr-2"/>
+                    <p style={{fontSize:'1.2em', color: '#FB723F'}} className="m-0">Back</p>
+                  </div>
+              </button>
+       ) }
        { showMessage && (
         <MessageDetails selectedMessage={selectedMessage} />
        ) }
@@ -321,7 +336,7 @@ console.log(allMessages);
                             cursor: "pointer",
                           }}
                         >
-                          <img src="./delete.png" width={20} height={20} />
+                          <img src="./delete.png" onClick={() => handleDeleteMessage(message)} width={20} height={20} />
                         </button>
                       </>
                     ) : (
