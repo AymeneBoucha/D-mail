@@ -24,6 +24,7 @@ const Messages = () => {
   const [Name, setName] = useState("");
   const [senderEmails, setSenderEmails] = useState({});
   const [receiverEmails, setReceiverEmails] = useState({});
+  const [hoverIndex, setHoverIndex] = useState(null);
   const [showMessage, setShowMessage] = useState(false);
   const [selectedMessage, setSelectedMessage]= useState({});
   const [counter, setCounter]= useState(0);
@@ -45,6 +46,7 @@ const Messages = () => {
     const newMessage = {
       sender:message.sender,
       receiver: message.receiver,
+      receiversGroup: message.receiversGroup,
       subject: message.subject,
       body: message.message,
       timestamp: message.timestamp,
@@ -52,7 +54,6 @@ const Messages = () => {
     };
     setMessages([...messages, newMessage]);
     setShowSendMessage(false);
-    console.log('messages',messages);
   };
 
   const handleToggleSendMessage = () => {
@@ -61,7 +62,6 @@ const Messages = () => {
 
   async function getRecieverPubKey(address) {
     const pubKeyX = await chatContract.getRecieverPubKey(address);
-    //console.log(pubKeyX);
    // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
     //const pubKey = bytes32PubKeyInverse.toString('hex');
     const pubKey = pubKeyX.slice(2);
@@ -90,7 +90,7 @@ const Messages = () => {
    useEffect( () => {
     if (counter == 1){
       setShowMessage(true);
-      console.log("Selected Message", selectedMessage);
+      //console.log("Selected Message", selectedMessage);
     };
     if (counter == 0)
     {
@@ -118,12 +118,11 @@ const Messages = () => {
     const messagesSent = await chatContract.MessageSent(result);
     const DecryptedMessagesReceived = [];
     const DecryptedMessagesSent = [];
-    
     for (let i = 0; i < messagesReceived.length; i++){
       const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
-      console.log("get pubKeyR : " + pubKeyR);
+      //console.log("get pubKeyR : " + pubKeyR);
       const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
-      console.log("decryptedMessage : " + decryptedMessage);
+      //console.log("decryptedMessage : " + decryptedMessage);
       const newMessage = {
         ...messagesReceived[i],
         message: decryptedMessage,
@@ -133,21 +132,35 @@ const Messages = () => {
 
     for (let i = 0; i < messagesSent.length; i++){
       const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
-      console.log("get pubKeyS : " + pubKeyS);
+      //console.log("get pubKeyS : " + pubKeyS);
       const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
-      console.log("decryptedMessage : " + decryptedMessage);
+     // console.log("decryptedMessage : " + decryptedMessage);
       const newMessage = {
         ...messagesSent[i],
         message: decryptedMessage,
       };
-      console.log(newMessage);
+      //console.log(newMessage);
       DecryptedMessagesReceived.push(newMessage);
     }
     
+    const keepUniqueMessages = (messages) => {
+      const uniqueMessages = [];
+      for (const message of messages) {
+        if (!uniqueMessages.some((otherMessage) => {
+          return formatTimestamp(message.timestamp) === formatTimestamp(otherMessage.timestamp) &&
+            message.sender === otherMessage.sender &&
+            message.receivers_group === otherMessage.receivers_group;
+        })) {
+          uniqueMessages.push(message);
+        }
+      }
+      return uniqueMessages;
+    };
     
-    const allMessages = [...DecryptedMessagesSent, ...DecryptedMessagesReceived];
+    const allMessages = [...keepUniqueMessages(DecryptedMessagesReceived), ...keepUniqueMessages(DecryptedMessagesSent)];
     allMessages.sort((a, b) => b.timestamp - a.timestamp);
-    
+
+console.log(allMessages);
     setMessages(allMessages);
 
     const senderEmails = {};
@@ -162,7 +175,7 @@ const Messages = () => {
       if (!(message.receiver in receiverEmails)) {
         getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
           ...prevState,
-          [message.receiver]: email
+          [message.receive]: email
         })));
       }
     });
@@ -186,6 +199,10 @@ const Messages = () => {
 
   useEffect(() => {
     getName();
+
+    messages.map((message, index) => (
+    console.log("message[0] : " ,message)
+    ));
     // Lock horizontal scroll
     document.body.style.overflowX = 'hidden';
     // Clean up on unmount
@@ -195,22 +212,7 @@ const Messages = () => {
     };
   }, []);
 
-  const buttons = [
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Inbox" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Sent" },
-     {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
-    },
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Spam" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
-    {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Favourites",
-    },
-  ];
-
-  const [hoverIndex, setHoverIndex] = useState(null);
+ 
 
 
   return (
@@ -275,7 +277,7 @@ const Messages = () => {
                       <div className="col-md-12">
                         <strong>From :</strong> {senderEmails[message.sender]}
                         <br/>
-                        <strong>To : </strong>{receiverEmails[message.receiver]}
+                        <strong>To : </strong>{message.receiversGroup}
                       </div>
                       <div className="col-md-12">
                       <strong>{message.subject}</strong>

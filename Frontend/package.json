@@ -18,6 +18,8 @@
     "crypto-browserify": "^3.12.0",
     "crypto-js": "^4.1.1",
     "elliptic": "^6.5.4",
+    "ipfs-core": "^0.18.0",
+    "ipfs-http-client": "^60.0.0",
     "js-sha256": "^0.9.0",
     "js-sha512": "^0.8.0",
     "jsencrypt": "^3.3.2",

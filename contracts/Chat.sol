@@ -3,6 +3,7 @@ pragma solidity ^0.8.9;
 
 
 contract Chat {
+    
     struct User {
         string name;
         string email;
@@ -24,9 +25,9 @@ contract Chat {
         uint256 timestamp;
         bool read;
         string fileHash;
+        string receiversGroup;
     }
 
-    
     mapping(bytes32 => string) public IDs;
     mapping(address => Secure) public Keys;
     mapping (address => User) public users;
@@ -145,16 +146,32 @@ contract Chat {
     }
 
     // Send message function
-    function sendMessage(address receiver, string calldata subject, string memory message, string memory fileHash) external {
+    function sendMessage(address receiver, string calldata subject, string memory message, string memory fileHash, string memory receiverGroup) external {
         require(
             checkUserExists(msg.sender) == true,
             "You must have an account"
         );
         require(checkUserExists(receiver) == true, "Recipient does not exist");
-        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false, fileHash);
+        //address[] memory receivers = new address[](1);
+        //receivers[0] = receiver;
+        Message memory message = Message(msg.sender, receiver, subject, message, block.timestamp, false, fileHash, receiverGroup);
         messages.push(message);
         //emit MessageSent(msg.sender, receiver, messageHash);
+        }        
+
+        function sendMessageToGroup(address[] memory receiver, string calldata subject, string []memory message, string memory fileHash, string memory emailGroup) external {
+        require(
+            checkUserExists(msg.sender) == true,
+            "You must have an account"
+        );
+        for(uint i = 0; i<receiver.length; i++){
+            require(checkUserExists(receiver[i]) == true, "Recipient does not exist");
+            Message memory message = Message(msg.sender, receiver[i], subject, message[i], block.timestamp, false, fileHash, emailGroup);
+        messages.push(message);
         }
+        
+        //emit MessageSent(msg.sender, receiver, messageHash);
+        }      
 
     function getAddress(string memory email) public view returns (address) {
         return usersByEmail[email];
@@ -208,16 +225,21 @@ contract Chat {
     ) public view returns (Message[] memory) {  
         uint count = 0;
         for (uint i = 0; i < messages.length; i++) {
-            if (messages[i].receiver == getAddress(email)) {
+            //for (uint j = 0; j < messages[i].receiver.length; j++){
+                if (messages[i].receiver == getAddress(email)) {
                 count++;
+            //}
             }
+            
         }
         Message[] memory messagesRecieved = new Message[](count);
         uint index = 0;
         for (uint i = 0; i < messages.length; i++) {
+            //for (uint j = 0; j < messages[i].receiver.length; j++){
             if (messages[i].receiver == getAddress(email)) {
                 messagesRecieved[index] = messages[i];
                 index++;
+           // }
             }
         }
         return messagesRecieved;

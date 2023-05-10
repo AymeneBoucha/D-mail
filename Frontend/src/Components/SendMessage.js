@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ChatContract from "../Chat.sol/Chat.json";
 import { contractAddress } from "../App";
 import { ec } from 'elliptic';
@@ -15,15 +15,12 @@ const bip39 = require('bip39');
 const curve = new ec('secp256k1');
 
 const SendMessage = () => {
-  const [receiver, setreceiver] = useState("");
   const [emailReceiver, setEmailReceiver] = useState("");
   const [subject, setSubject] = useState("");
   const [fileImg, setFileImg] = useState(null);
-  const [attachment, setAttachment] = useState("");
-  const [receiverName, setreceiverName] = useState("");
-  const [buffer, setBuffer] = useState("");
   const [body, setBody] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
+  const [usersEmails, setUsersEmails] = useState([]);
   const [walletAddressName, setWalletAddressName] = useState("");
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState("");
@@ -74,10 +71,41 @@ const SendMessage = () => {
     return pubKey;
    }
 
+
    async function getSenderPriKey(address){
     const email = await chatContract.getEmail(address);
     const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
+   }
+
+  async function getReceiversAddresses(receiver){
+    const receiversArray = receiver.split(",");
+    const receiversAddresses = [];
+    for(let i = 0; i<receiversArray.length; i++){
+      const address = await chatContract.getAddress(receiversArray[i]);
+      receiversAddresses.push(address);
+    }
+    return receiversAddresses;
+   }
+
+   async function getRecieversPubKey(addresses) {
+    const ReceiversPubKeys = [];
+    for (let i = 0; i < addresses.length; i++){
+      const pubKeyX = await chatContract.getRecieverPubKey(addresses[i]);
+      console.log(pubKeyX);
+    const pubKey = pubKeyX.slice(2);
+    ReceiversPubKeys.push(pubKey);
+    }
+    return ReceiversPubKeys;
+   }
+
+   async function setEncryptedMessages(message, pubKeys, priKey){
+    const encryptedMessages = [];
+    for(let i = 0; i < pubKeys.length; i++){
+      const encryptedMessage = encryptMessage(message, pubKeys[i], priKey);
+      encryptedMessages.push(encryptedMessage);
+    }
+    return encryptedMessages;
    }
 
   async function sendMessage(event) {
@@ -129,25 +157,58 @@ const SendMessage = () => {
     console.log(error);
   }
 }else{
+  console.log(getReceiversAddresses(emailReceiver));
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
   });
   const result = await chatContract.getName(accounts[0]);
   setWalletAddressName(result);
   setWalletAddress(accounts[0]);
-  const address = await chatContract.getAddress(emailReceiver);
   const priKey = await getSenderPriKey(accounts[0]);
-  const recieverPubKey = await getRecieverPubKey(address);
-  console.log("Receiver public key : " + recieverPubKey);
-  const encryptedMessage = encryptMessage(body, recieverPubKey, priKey);
-  console.log("encrypted message : " + encryptedMessage);
-  const tx = await chatContract.sendMessage(address, subject, encryptedMessage, '');
-  console.log(tx.hash);
+ //const recieverPubKey = await getRecieverPubKey(address);
+  //console.log("Receiver public key : " + recieverPubKey);
+  /*const encryptedMessage = encryptMessage(body, recieverPubKey, priKey);
+  console.log("encrypted message : " + encryptedMessage);*/
+  console.log(emailReceiver);
+  const receiversArray = getReceiversAddresses(emailReceiver);
+  console.log(receiversArray);
 
-  setIsExecuted(true);
-  setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
-}
+    const receiversAddresses = await getReceiversAddresses(emailReceiver);
+    if(receiversAddresses.length == 1){
+      const pubKey = await getRecieverPubKey(receiversAddresses[0]);
+      const encryptedMessage = encryptMessage(body, pubKey, priKey);
+      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, emailReceiver);
+    }else{
+      const receiversAddresses = await getReceiversAddresses(emailReceiver);
+      const pubKeys = await getRecieversPubKey(receiversAddresses)
+      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
+      const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, '', emailReceiver);
   }
+}
+
+  }
+  const emails = ['admin@gmail.com', 'aymen@gmail.com', 'lynda@gmail.com'];
+
+  async function getAllUsers() {
+    try {
+      const allUsers = await chatContract.getAllUsers();
+  
+      // Extract emails from the returned users
+      const emails = allUsers.map(user => user.email);
+  
+      // Return the emails array
+      setUsersEmails(emails);
+      return emails;
+    } catch (error) {
+      console.error('Error:', error);
+      // Return an empty array or handle the error as needed
+      return [];
+    }
+  }
+
+  getAllUsers();
+
+ 
 
   return (
     <div className="card-body p-0 text-center m-2" style={{ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
@@ -161,15 +222,33 @@ const SendMessage = () => {
             To:
           </label>
           <input
-            type="text"
-            className="form-control form-control-lg mb-1"
-            id="emailReceiver"
-            placeholder="To"
-            style={{ border: "none" }}
-            value={emailReceiver}
-            onChange={(e) => setEmailReceiver(e.target.value)}
-            required
-          />
+  type="text"
+  className="form-control form-control-lg mb-1"
+  id="emailReceiver"
+  placeholder="To"
+  style={{
+    border: "none",
+    backgroundColor:
+      emailReceiver.length >= 6
+        ? emailReceiver
+            .split(/[,\s]+/) // Splitting the input by commas or spaces
+            .filter((email) => email.trim() !== "") // Filter out empty strings after splitting
+            .every((email) => usersEmails.includes(email)) // Checking if every entered email is in the 'emails' array
+            ? "#CFF3C1"
+            : "#FFCACA"
+        : "",
+  }}
+  value={emailReceiver}
+  onChange={(e) => setEmailReceiver(e.target.value)}
+  required
+/>
+
+
+
+
+
+
+
         </div>
         <div className="form-group">
           <label htmlFor="subject" className="sr-only">

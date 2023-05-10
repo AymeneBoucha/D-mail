@@ -94,8 +94,9 @@ function ConnectWallet() {
         const bytes32PubKey = Buffer.from(paddedHexPubKey, 'hex');
 
         console.log(bytes32HashSeed + "\n" + bytes32HashPassword + "\n" + pubKey);
-        setShowModal(true);
+       
         await chatContract.createUser(userId, name, email, walletAddress, bytes32HashSeed, bytes32HashPassword, bytes32PubKey);
+        setShowModal(true);
         
       } else {
         alert("You don't have permission to create an account ! ");
