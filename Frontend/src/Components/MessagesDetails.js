@@ -130,25 +130,21 @@ function formatTimestamp(timestamp) {
   };
   
   return (
+    
     <div>
    
-      <br/><br/>
-      <h1>{msgC.subject}</h1>
-      {/* <p><b>From:</b> {msgC.sender}</p> */}
-      <p><b>From: </b>{senderEmail}</p>
-      {/* <p><b>To:</b> {msgC.receiver}</p> */}
-      <h5>{formatTimestamp(msgC.timestamp.toNumber())}</h5>
-      <br></br>
+      <br/>
+      <h2>{msgC.subject}</h2>
+      <hr/>
+      <h5><b>From: </b>{senderEmail}</h5>
+      <h5><b>Sent on: </b>{formatTimestamp(msgC.timestamp.toNumber())}</h5>
+      <br/>
       <p>{msgC.message}</p>
-      {/* <p>{msgC.fileHash}</p> */}
+      <br/>
       <div>
-            {/* <button onClick={getFileFromIPFS}>
-              Get file
-            </button> */}
             {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
             {fileUrl && <a href={fileUrl} download = 'DmailDownload.txt'>Download file</a>}
-
-          </div>
+      </div>
 
     </div>
     

@@ -171,7 +171,7 @@ contract Chat {
         messageCount++;
         }        
 
-        function sendMessageToGroup(address[] memory receiver, string calldata subject, string []memory message, string memory fileHash, string memory emailGroup) external {
+        function sendMessageToGroup(address[] memory receiver, string calldata subject, string []memory message, string []memory cciMessages, string memory fileHash, string memory emailGroup, address[] memory cciReceivers) external {
         require(
             checkUserExists(msg.sender) == true,
             "You must have an account"
@@ -179,6 +179,12 @@ contract Chat {
         for(uint i = 0; i<receiver.length; i++){
             require(checkUserExists(receiver[i]) == true, "Recipient does not exist");
             Message memory message = Message(messageCount, msg.sender, receiver[i], subject, message[i], block.timestamp, false, fileHash, emailGroup,DeletionStatus.NotDeleted);
+        messages.push(message);
+        messageCount++;
+        }
+        for(uint i = 0; i<cciReceivers.length; i++){
+            require(checkUserExists(cciReceivers[i]) == true, "Recipient does not exist");
+            Message memory message = Message(messageCount, msg.sender, cciReceivers[i], subject, cciMessages[i], block.timestamp, false, fileHash, '',DeletionStatus.NotDeleted);
         messages.push(message);
         messageCount++;
         }

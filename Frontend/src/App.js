@@ -15,7 +15,7 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddress =  '0x5e24d5c770982EB86A2e1Fb0b15F5794dD001377';
+const contractAddress =  '0x3047a97a646c9c3CA0D4bd9A0181738AAC0bac55';
 export { contractAddress };
 
 function App() {

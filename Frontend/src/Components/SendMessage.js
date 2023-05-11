@@ -16,6 +16,7 @@ const curve = new ec('secp256k1');
 
 const SendMessage = () => {
   const [emailReceiver, setEmailReceiver] = useState("");
+  const [cci, setCCI] = useState("");
   const [subject, setSubject] = useState("");
   const [fileImg, setFileImg] = useState(null);
   const [body, setBody] = useState("");
@@ -96,6 +97,7 @@ const SendMessage = () => {
     const pubKey = pubKeyX.slice(2);
     ReceiversPubKeys.push(pubKey);
     }
+    console.log(ReceiversPubKeys);
     return ReceiversPubKeys;
    }
 
@@ -165,6 +167,7 @@ const SendMessage = () => {
   setWalletAddressName(result);
   setWalletAddress(accounts[0]);
   const priKey = await getSenderPriKey(accounts[0]);
+  console.log("priKey: " + priKey);
  //const recieverPubKey = await getRecieverPubKey(address);
   //console.log("Receiver public key : " + recieverPubKey);
   /*const encryptedMessage = encryptMessage(body, recieverPubKey, priKey);
@@ -179,15 +182,22 @@ const SendMessage = () => {
       const encryptedMessage = encryptMessage(body, pubKey, priKey);
       const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, '', emailReceiver);
     }else{
-      const receiversAddresses = await getReceiversAddresses(emailReceiver);
       const pubKeys = await getRecieversPubKey(receiversAddresses)
       const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
-      const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, '', emailReceiver);
+      if(cci === ""){
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [],  '', emailReceiver, []);
+      }
+      else{
+        const cciReceivers = await getReceiversAddresses(cci);
+        const pubKeys = await getRecieversPubKey(cciReceivers)
+      const encryptedCCiMessages = await setEncryptedMessages(body, pubKeys, priKey)
+        //console.log(receiversAddresses, subject, encryptedCCiMessages, '', emailReceiver, cciReceivers);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', emailReceiver, cciReceivers);
+      }
   }
 }
 
   }
-  const emails = ['admin@gmail.com', 'aymen@gmail.com', 'lynda@gmail.com'];
 
   async function getAllUsers() {
     try {
@@ -240,6 +250,28 @@ const SendMessage = () => {
   }}
   value={emailReceiver}
   onChange={(e) => setEmailReceiver(e.target.value)}
+  required
+/>
+
+<input
+  type="text"
+  className="form-control form-control-lg mb-1"
+  id="cci"
+  placeholder="cci"
+  style={{
+    border: "none",
+    backgroundColor:
+      cci.length >= 6
+        ? cci
+            .split(/[,\s]+/) // Splitting the input by commas or spaces
+            .filter((email) => email.trim() !== "") // Filter out empty strings after splitting
+            .every((email) => usersEmails.includes(email)) // Checking if every entered email is in the 'emails' array
+            ? "#CFF3C1"
+            : "#FFCACA"
+        : "",
+  }}
+  value={cci}
+  onChange={(e) => setCCI(e.target.value)}
   required
 />
 

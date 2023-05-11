@@ -3,6 +3,9 @@ import MessageDetails from './MessagesDetails';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import { BsArrowLeft  } from "react-icons/bs";
+import { BsReplyFill  } from "react-icons/bs";
+import { BsBoxArrowUpRight  } from "react-icons/bs";
+import { BsTrashFill  } from "react-icons/bs";
 import '../assets/Inbox.css';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
@@ -182,7 +185,7 @@ console.log(allMessages);
       if (!(message.receiver in receiverEmails)) {
         getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
           ...prevState,
-          [message.receive]: email
+          [message.receiver]: email
         })));
       }
     });
@@ -228,15 +231,40 @@ console.log(allMessages);
 
       <div>
        { showMessage && (
+        <span>
               <button 
-              className="btn btn-primary btn-orange btn-lg" 
-              style={{ backgroundColor: 'white', color: '#FB723F', borderRadius: '30px', border: '2px solid #FB723F' }} 
+              className="btn btn-primary btn-orange" 
+              style={{ backgroundColor: 'white', color: '#FB723F', borderRadius: '30px', border: '2px solid #FB723F', margin: '0 1rem', fontSize:'1.1em'}}
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "#F64A0B", e.target.style.color = "white")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "white", e.target.style.color = "#F64A0B")}
               onClick={backToMessages}>         
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <BsArrowLeft  className="w-10 h-10 mr-2"/>
-                    <p style={{fontSize:'1.2em', color: '#FB723F'}} className="m-0">Back</p>
-                  </div>
+              <BsArrowLeft  className="w-10 h-10 mr-2"/>Back
               </button>
+              <button 
+              className="btn btn-primary btn-orange" 
+              style={{ backgroundColor: 'white', color: 'gray', borderRadius: '30px', border: '2px solid gray', margin: '0 1rem', fontSize:'1.1em'}} 
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "gray", e.target.style.color = "white")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "white", e.target.style.color = "gray")}
+              onClick={backToMessages}>         
+              <BsReplyFill  className="w-10 h-10 mr-2"/>Reply
+              </button>
+              <button 
+              className="btn btn-primary btn-orange" 
+              style={{ backgroundColor: 'white', color: 'gray', borderRadius: '30px', border: '2px solid gray', margin: '0 1rem', fontSize:'1.1em'}} 
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "gray", e.target.style.color = "white")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "white", e.target.style.color = "gray")}
+              onClick={backToMessages}>       
+              <BsBoxArrowUpRight  className="w-10 h-10 mr-2"/>Forward  
+              </button>
+              <button 
+              className="btn btn-primary btn-orange" 
+              style={{ backgroundColor: 'white', color: 'gray', borderRadius: '30px', border: '2px solid gray', margin: '0 1rem', fontSize:'1.1em'}} 
+              onMouseEnter={(e) => (e.target.style.backgroundColor = "gray", e.target.style.color = "white")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "white", e.target.style.color = "gray")}
+              onClick={()=>handleDeleteMessage(selectedMessage)}>         
+              <BsTrashFill  className="w-10 h-10 mr-2"/>Delete
+              </button>
+          </span>
        ) }
        { showMessage && (
         <MessageDetails selectedMessage={selectedMessage} />
@@ -272,36 +300,37 @@ console.log(allMessages);
                 </div>
               </li>
               {messages.map((message, index) => (
-                <li
-                  key={index}
-                  onMouseEnter={() => setHoverIndex(index)}
-                  onMouseLeave={() => setHoverIndex(null)}
-                  style={{
-                    borderBottom: "1px solid #ccc",
-                    width: "100%",
-                    padding: "15px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    backgroundColor: message.read ? "white" : "ghostwhite",
-                  }}
-                  onClick={()=>handleSelectedMessage(message)}
-                >
-                  <div>
-                    <div className="row">
-                      <div className="col-md-12">
-                        <strong>From :</strong> {senderEmails[message.sender]}
-                        <br/>
-                        <strong>To : </strong>{message.receiversGroup}
-                      </div>
-                      <div className="col-md-12">
-                      <strong>{message.subject}</strong>
-                      <br/>
-                        <strong>Message : </strong>
-                        {message.message.length > 100
-                          ? `${message.message.substring(0, 100)}...`
-                          : message.message}
+                  <li
+                    key={index}
+                    onMouseEnter={() => setHoverIndex(index)}
+                    onMouseLeave={() => setHoverIndex(null)}
+                    style={{
+                      borderBottom: "1px solid #ccc",
+                      width: "100%",
+                      padding: "15px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      backgroundColor: message.read ? "white" : "ghostwhite",
+                    }}
+                  >
+                    <div>
+                      <div className="row">
+                        <div className="col-md-12">
+                          <strong>From :</strong> {senderEmails[message.sender]}
                           <br/>
+                          <strong>To: </strong>
+                            {message.receiversGroup === "" ? receiverEmails[message.receiver] : message.receiversGroup}
+
+                        </div>
+                        <div className="col-md-12">
+                        <strong>{message.subject}</strong>
+                        <br/>
+                          <strong>Message : </strong>
+                          {message.message.length > 100
+                            ? `${message.message.substring(0, 100)}...`
+                            : message.message}
+                            <br/>
                       </div>
                       
                     </div>
