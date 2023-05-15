@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import MessageDetails from './MessagesDetails';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
 import { BsArrowLeft  } from "react-icons/bs";
 import { BsReplyFill  } from "react-icons/bs";
 import { BsBoxArrowUpRight  } from "react-icons/bs";
@@ -9,7 +10,7 @@ import { BsTrashFill  } from "react-icons/bs";
 import '../assets/Inbox.css';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
-import {contractAddress} from "../App"
+import {contractAddressStructures, contractAddressChat} from "../App"
 const curve = new ec('secp256k1');
 
 
@@ -27,9 +28,9 @@ const Messages = () => {
   const [showSendMessage, setShowSendMessage] = useState(false);
   //var counter=0;
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
 
   const backToMessages = () => {
     console.log("going back");
@@ -71,7 +72,7 @@ const Messages = () => {
    };
 
   async function getRecieverPubKey(address) {
-    const pubKeyX = await chatContract.getRecieverPubKey(address);
+    const pubKeyX = await userContract.getRecieverPubKey(address);
    // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
     //const pubKey = bytes32PubKeyInverse.toString('hex');
     const pubKey = pubKeyX.slice(2);
@@ -79,7 +80,7 @@ const Messages = () => {
    }
 
    async function getSenderPriKey(address){
-    const email = await chatContract.getEmail(address);
+    const email = await userContract.getEmail(address);
     const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
    }
@@ -117,9 +118,9 @@ const Messages = () => {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    const result = await chatContract.getEmail(accounts[0]);
+    const result = await userContract.getEmail(accounts[0]);
     setEmail(result);
-    const result2 = await chatContract.getName(accounts[0]);
+    const result2 = await userContract.getName(accounts[0]);
     setName(result2);
    
     const MyPriKey = await getSenderPriKey(accounts[0]);
@@ -203,7 +204,7 @@ console.log(allMessages);
   }
 
   async function getEmail(adresse) {
-    const result = await chatContract.getEmail(adresse);
+    const result = await userContract.getEmail(adresse);
     return result;
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import SendMessage from '../Components/SendMessage';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
 import Messages from '../Components/Messages';
 import '../assets/Inbox.css';
 import { Button, ListGroup } from 'react-bootstrap';
@@ -11,7 +12,7 @@ import { MdNotificationImportant } from "react-icons/md";
 import { MdLabelImportant } from "react-icons/md";
 // Importation de la Navbar et left bar
 import Navbar from '../Components/NavBar';
-import {contractAddress} from "../App"
+import {contractAddressStructures, contractAddressChat} from "../App"
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import axios from "axios";
@@ -27,10 +28,9 @@ const Inbox = () => {
   const [showSendMessage, setShowSendMessage] = useState(false);
  
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
-  //const contractAddress = '0xa41102ce0fDA55beD090cEAa803cAf4538c945c1';
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
   
   const handleSendMessage = (message) => {
     const newMessage = {
@@ -51,7 +51,7 @@ const Inbox = () => {
   };
 
   async function getRecieverPubKey(address) {
-    const pubKeyX = await chatContract.getRecieverPubKey(address);
+    const pubKeyX = await userContract.getRecieverPubKey(address);
     //console.log(pubKeyX);
    // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
     //const pubKey = bytes32PubKeyInverse.toString('hex');
@@ -60,7 +60,7 @@ const Inbox = () => {
    }
 
    async function getSenderPriKey(address){
-    const email = await chatContract.getEmail(address);
+    const email = await userContract.getEmail(address);
     const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
    }
@@ -77,69 +77,7 @@ const Inbox = () => {
     return final;
   };
 
-  // async function getName() {
-  //   const accounts = await window.ethereum.request({
-  //     method: "eth_requestAccounts",
-  //   });
-  //   const result = await chatContract.getEmail(accounts[0]);
-  //   setName(result);
-   
-  //   const MyPriKey = await getSenderPriKey(accounts[0]);
-
-  //   const messagesReceived = await chatContract.MessageReceived(result);
-  //   const messagesSent = await chatContract.MessageSent(result);
-  //   const DecryptedMessagesReceived = [];
-  //   const DecryptedMessagesSent = [];
-    
-  //   for (let i = 0; i < messagesReceived.length; i++){
-  //     const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
-  //     console.log("get pubKeyR : " + pubKeyR);
-  //     const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
-  //     console.log("decryptedMessage : " + decryptedMessage);
-  //     const newMessage = {
-  //       ...messagesReceived[i],
-  //       message: decryptedMessage,
-  //     };
-  //     DecryptedMessagesReceived.push(newMessage);
-  //   }
-
-  //   for (let i = 0; i < messagesSent.length; i++){
-  //     const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
-  //     console.log("get pubKeyS : " + pubKeyS);
-  //     const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
-  //     console.log("decryptedMessage : " + decryptedMessage);
-  //     const newMessage = {
-  //       ...messagesSent[i],
-  //       message: decryptedMessage,
-  //     };
-  //     console.log(newMessage);
-  //     DecryptedMessagesReceived.push(newMessage);
-  //   }
-    
-    
-  //   const allMessages = [...DecryptedMessagesSent, ...DecryptedMessagesReceived];
-  //   allMessages.sort((a, b) => b.timestamp - a.timestamp);
-    
-  //   setMessages(allMessages);
-
-  //   const senderEmails = {};
-  //   const receiverEmails = {};
-  //   allMessages.forEach(message => {
-  //     if (!(message.sender in senderEmails)) {
-  //       getEmail(message.sender).then(email => setSenderEmails(prevState => ({
-  //         ...prevState,
-  //         [message.sender]: email
-  //       })));
-  //     }
-  //     if (!(message.receiver in receiverEmails)) {
-  //       getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
-  //         ...prevState,
-  //         [message.receiver]: email
-  //       })));
-  //     }
-  //   });
-  // }
-   
+  
   function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
     const year = date.getFullYear();
@@ -152,7 +90,7 @@ const Inbox = () => {
   }
 
   async function getEmail(adresse) {
-    const result = await chatContract.getEmail(adresse);
+    const result = await userContract.getEmail(adresse);
     return result;
   }
 

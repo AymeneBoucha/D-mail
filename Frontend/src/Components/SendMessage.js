@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from "react";
-import ChatContract from "../Chat.sol/Chat.json";
-import { contractAddress } from "../App";
+import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
+import {contractAddressStructures, contractAddressChat} from "../App"
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import axios from "axios";
@@ -28,13 +29,9 @@ const SendMessage = () => {
   const [isMinimized, setIsMinimized] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(
-    contractAddress,
-    ChatContract.abi,
-    signer
-  );
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
   
   function encryptMessage(plaintext, pubKey, priKey) {
      const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
@@ -50,21 +47,9 @@ const SendMessage = () => {
      console.log("hexCipher : " + hexCipher);
      return hexCipher;
    };
- 
-   function decryptMessage(ciphertextt, pubKey, priKey) {
-     const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
-     console.log(sharedSecret);
-     const ciphertext = Buffer.from(ciphertextt, 'base64');
-     const iv = ciphertext.slice(0, 16);
-     const encryptedMessage = ciphertext.slice(16);
-     const encryptionKey = sharedSecret.toString('hex').substr(0, 32);
-     const decipher = crypto.createDecipheriv('aes-256-cbc', encryptionKey, iv);
-     const decryptedMessage = Buffer.concat([decipher.update(encryptedMessage), decipher.final()]);
-     console.log(decryptedMessage.toString('utf8'));
-   };
 
    async function getRecieverPubKey(address) {
-    const pubKeyX = await chatContract.getRecieverPubKey(address);
+    const pubKeyX = await userContract.getRecieverPubKey(address);
     console.log(pubKeyX);
    // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
     //const pubKey = bytes32PubKeyInverse.toString('hex');
@@ -74,7 +59,7 @@ const SendMessage = () => {
 
 
    async function getSenderPriKey(address){
-    const email = await chatContract.getEmail(address);
+    const email = await userContract.getEmail(address);
     const priKey = sessionStorage.getItem('PrivateKey.'+email);
     return priKey;
    }
@@ -83,7 +68,7 @@ const SendMessage = () => {
     const receiversArray = receiver.split(",");
     const receiversAddresses = [];
     for(let i = 0; i<receiversArray.length; i++){
-      const address = await chatContract.getAddress(receiversArray[i]);
+      const address = await userContract.getAddress(receiversArray[i]);
       receiversAddresses.push(address);
     }
     return receiversAddresses;
@@ -92,7 +77,7 @@ const SendMessage = () => {
    async function getRecieversPubKey(addresses) {
     const ReceiversPubKeys = [];
     for (let i = 0; i < addresses.length; i++){
-      const pubKeyX = await chatContract.getRecieverPubKey(addresses[i]);
+      const pubKeyX = await userContract.getRecieverPubKey(addresses[i]);
       console.log(pubKeyX);
     const pubKey = pubKeyX.slice(2);
     ReceiversPubKeys.push(pubKey);
@@ -140,10 +125,10 @@ const SendMessage = () => {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    const result = await chatContract.getName(accounts[0]);
+    const result = await userContract.getName(accounts[0]);
     setWalletAddressName(result);
     setWalletAddress(accounts[0]);
-    const address = await chatContract.getAddress(emailReceiver);
+    const address = await userContract.getAddress(emailReceiver);
     const priKey = await getSenderPriKey(accounts[0]);
     const recieverPubKey = await getRecieverPubKey(address);
     console.log("Receiver public key : " + recieverPubKey);
@@ -163,7 +148,7 @@ const SendMessage = () => {
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
   });
-  const result = await chatContract.getName(accounts[0]);
+  const result = await userContract.getName(accounts[0]);
   setWalletAddressName(result);
   setWalletAddress(accounts[0]);
   const priKey = await getSenderPriKey(accounts[0]);
@@ -180,19 +165,19 @@ const SendMessage = () => {
     if(receiversAddresses.length == 1){
       const pubKey = await getRecieverPubKey(receiversAddresses[0]);
       const encryptedMessage = encryptMessage(body, pubKey, priKey);
-      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, '', emailReceiver);
+      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, "", '', emailReceiver);
     }else{
       const pubKeys = await getRecieversPubKey(receiversAddresses)
+      console.log("\n\n\n" + body, pubKeys, priKey);
       const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
       if(cci === ""){
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [],  '', emailReceiver, []);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [], '', '', emailReceiver, []);
       }
       else{
         const cciReceivers = await getReceiversAddresses(cci);
         const pubKeys = await getRecieversPubKey(cciReceivers)
       const encryptedCCiMessages = await setEncryptedMessages(body, pubKeys, priKey)
-        //console.log(receiversAddresses, subject, encryptedCCiMessages, '', emailReceiver, cciReceivers);
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', emailReceiver, cciReceivers);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', '', emailReceiver, cciReceivers);
       }
   }
 }
@@ -201,7 +186,7 @@ const SendMessage = () => {
 
   async function getAllUsers() {
     try {
-      const allUsers = await chatContract.getAllUsers();
+      const allUsers = await userContract.getAllUsers();
   
       // Extract emails from the returned users
       const emails = allUsers.map(user => user.email);

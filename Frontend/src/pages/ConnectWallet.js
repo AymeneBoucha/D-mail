@@ -1,12 +1,13 @@
 import { ethers } from 'ethers';
 import { useState } from 'react';
 import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import { sha512 } from 'js-sha512';
 import { generateMnemonic } from 'bip39';
 import AES from 'crypto-js/aes';
-import {contractAddress} from "../App"
+import {contractAddressStructures, contractAddressChat} from "../App"
 import { Button, Modal } from 'react-bootstrap';
 
 const bip39 = require('bip39');
@@ -26,10 +27,14 @@ function ConnectWallet() {
   const [userId, setUserId] = useState('');
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState('');
+
+
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+
+
   async function connectWallet() {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     setWalletAddress(accounts[0]);
@@ -64,7 +69,7 @@ function ConnectWallet() {
         setFormError("Passwords do not match");
         return;
       }
-      const userExists = await chatContract.verifyUser(userId, email);
+      const userExists = await userContract.verifyUser(userId, email);
       console.log(userExists);
       if (userExists == true) {
         const keys = generateKeys();
@@ -95,7 +100,7 @@ function ConnectWallet() {
 
         console.log(bytes32HashSeed + "\n" + bytes32HashPassword + "\n" + pubKey);
        
-        await chatContract.createUser(userId, name, email, walletAddress, bytes32HashSeed, bytes32HashPassword, bytes32PubKey);
+        await userContract.createUser(userId, name, email, walletAddress, bytes32HashSeed, bytes32HashPassword, bytes32PubKey);
         setShowModal(true);
         
       } else {
@@ -107,7 +112,7 @@ function ConnectWallet() {
   async function IsConnected(event) {
     event.preventDefault();
     
-   const tx =  await chatContract.createUser;
+   const tx =  await userContract.createUser;
   
 
   }

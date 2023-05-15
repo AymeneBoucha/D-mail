@@ -2,7 +2,8 @@ import "../assets/App.css";
 import React, { useState } from "react";
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
-import {contractAddress} from "../App"
+import StructuresContract from '../Structures.sol/Structures.json';
+import {contractAddressStructures, contractAddressChat} from "../App"
 
 function NameForum() {
 
@@ -13,11 +14,10 @@ function NameForum() {
   const [walletAddress, setWalletAddress] = useState('');
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
-  //const contractAddress = '0xa41102ce0fDA55beD090cEAa803cAf4538c945c1';
   const signer = provider.getSigner();
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
 
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
  async function connectWallet() {
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     setWalletAddress(accounts[0]);
@@ -26,7 +26,7 @@ function NameForum() {
 
   async function createUserId() {
     try{
-    await chatContract.createUserId(email, userId);
+    await userContract.createUserId(email, userId);
     window.location.href = "/create";
     }
     catch(e) {

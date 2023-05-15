@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
 import '../assets/accounts.css';
 import { ListGroup } from 'react-bootstrap';
 import { BsPersonFillAdd,BsArchiveFill,BsWallet } from "react-icons/bs";
@@ -8,7 +9,7 @@ import { FaArchive, FaInbox, FaStar, FaUser,FaRegUser } from "react-icons/fa";
 import {HiUsers} from  "react-icons/hi";
 import {MdGroups,MdManageAccounts,MdDelete,MdOutlineMail,MdEdit} from "react-icons/md";
 import Navbar from '../Components/NavBar';
-import { contractAddress } from '../App';
+import {contractAddressStructures, contractAddressChat} from "../App"
 
 const Admin = () => {
   const [users, setUsers] = useState([]);
@@ -17,19 +18,18 @@ const Admin = () => {
   const [NewUsers, setNewUsers] = useState({});
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
-
-  //const contractAddress = '0xa41102ce0fDA55beD090cEAa803cAf4538c945c1';
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
 
   async function getName() {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    const result = await chatContract.getName(accounts[0]);
+    const result = await userContract.getName(accounts[0]);
     setName(result);
 
-    const allUsers = await chatContract.getAllUsers();
+    const allUsers = await userContract.getAllUsers();
     setUsers(allUsers);
   }
 

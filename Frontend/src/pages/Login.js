@@ -1,8 +1,9 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from "react";
 import { Button, Modal } from "react-bootstrap";
-import ChatContract from "../Chat.sol/Chat.json";
-import { contractAddress } from "../App";
+import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
+import {contractAddressStructures, contractAddressChat} from "../App"
 import AES from "crypto-js/aes";
 import CryptoJS from "crypto-js";
 import crypto from "crypto-browserify";
@@ -18,13 +19,12 @@ function Login() {
   const [userAddress, setUserAddress] = useState("");
   const [password, setPassword] = useState();
   const [showModal, setShowModal] = useState(false);
+
+
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(
-    contractAddress,
-    ChatContract.abi,
-    signer
-  );
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -34,7 +34,7 @@ function Login() {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    const email = await chatContract.getEmail(accounts[0]);
+    const email = await userContract.getEmail(accounts[0]);
     console.log(email);
     return email;
   }
@@ -47,7 +47,7 @@ function Login() {
     hashPassword.update(password);
     const digestPassword = hashPassword.digest("hex");
     const bytes32HashPassword = "0x" + digestPassword.padStart(32, "0");
-    const verify = await chatContract.verifyPassword(
+    const verify = await userContract.verifyPassword(
       accounts[0],
       bytes32HashPassword
     );
@@ -63,7 +63,7 @@ function Login() {
     hashSeed.update(seedPhrase);
     const digestSeed = hashSeed.digest("hex");
     const bytes32HashSeed = "0x" + digestSeed.padStart(32, "0");
-    const verify = await chatContract.verifySeed(accounts[0], bytes32HashSeed);
+    const verify = await userContract.verifySeed(accounts[0], bytes32HashSeed);
     return verify;
   }
 
@@ -123,7 +123,7 @@ function Login() {
     async function checkLogin() {
       const userAddress = await signer.getAddress();
       setUserAddress(userAddress);
-      const user = await chatContract.users(userAddress);
+      const user = await userContract.users(userAddress);
       console.log(user, userAddress);
       setExists(user.exists);
       if (user.exists) {

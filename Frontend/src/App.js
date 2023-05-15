@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { useState, useEffect } from 'react';
-import ChatContract from "./Chat.sol/Chat.json";
+import ChatContract from './Chat.sol/Chat.json';
+import StructuresContract from './Structures.sol/Structures.json';
 import NameForum from "./pages/NameForum";
 import ConnectWallet from "./pages/ConnectWallet";
 import Login from "./pages/Login";
@@ -15,18 +16,22 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddress =  '0x3047a97a646c9c3CA0D4bd9A0181738AAC0bac55';
-export { contractAddress };
+const contractAddressStructures =  '0xc0e774b4F92804bEB5c2E142Cc6d676e79619A43';
+const contractAddressChat = '0x1DbaAa60DDe19C00DD0BCBB9f69e69578a544e9E';
+export { contractAddressStructures, contractAddressChat };
 
 function App() {
   const [name, setName] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
  const [connected,setConnected]=useState("");
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  
-  //const contractAddress = '0x7bdc32B704E0E4b757964B961032C92F6e6b8AB2';
-  const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+
+
+ const provider = new ethers.providers.Web3Provider(window.ethereum);
+ const signer = provider.getSigner();
+ const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+ const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+
+
   async function connectWallet() {
     const result= await window.ethereum.isConnected();
     console.log(result);

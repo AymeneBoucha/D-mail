@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios";
-import {contractAddress} from "../App"
+import {contractAddressStructures, contractAddressChat} from "../App"
 import ChatContract from '../Chat.sol/Chat.json';
+import StructuresContract from '../Structures.sol/Structures.json';
 import { ethers } from 'ethers';
 
 
 const MessageDetails = (selectedMessage) => {
 
-  const provider = new ethers.providers.Web3Provider(window.ethereum); 
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
-  const chatContract = new ethers.Contract(contractAddress , ChatContract.abi, signer);
+  const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
+  const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
   
   const [imageUrl, setImageUrl] = useState(null);
   const [fileUrl, setFileUrl] = useState(null);
@@ -23,7 +25,7 @@ const MessageDetails = (selectedMessage) => {
   const msgC = msg.selectedMessage;
 
 async function getSenderEmail(){
-  const result = await chatContract.getEmail(msgC.sender);
+  const result = await userContract.getEmail(msgC.sender);
   setSenderEmail(result);
   console.log("sender email is", senderEmail);
 }
