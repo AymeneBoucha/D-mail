@@ -27,6 +27,7 @@ const SendMessage = () => {
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
+  const [shareable, setShareable]= useState("");
   const [showCCI, setShowCCI] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -170,7 +171,7 @@ const SendMessage = () => {
     if(receiversAddresses.length == 1){
       const pubKey = await getRecieverPubKey(receiversAddresses[0]);
       const encryptedMessage = encryptMessage(body, pubKey, priKey);
-      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, "", '', emailReceiver);
+      const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, shareable, '', emailReceiver);
     }else{
       const pubKeys = await getRecieversPubKey(receiversAddresses)
       console.log("\n\n\n" + body, pubKeys, priKey);
@@ -299,6 +300,23 @@ const SendMessage = () => {
             required
           />
         </div>
+
+        <div className="form-group">
+      <label htmlFor="shareable" className="switch-label">
+        Is the Message shareable?
+      </label>
+      <label className="switch">
+        <input
+          type="checkbox"
+          id="shareable"
+          checked={shareable}
+          onChange={(e) => setShareable(e.target.checked)}
+        />
+        <span className="slider"></span>
+      </label>
+      
+    </div>
+
         <div className="form-group d-flex justify-content-between align-items-center">
         <div className="btn-group d-flex align-items-center">
           <label htmlFor="upload-button" className="btn btn-secondary btn-sm rounded-end flex-grow-1" style={{

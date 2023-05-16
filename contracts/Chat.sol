@@ -5,7 +5,7 @@ import "./Structures.sol";
 contract Chat {
     Structures structures;
      constructor() {
-    structures = Structures(0xc0e774b4F92804bEB5c2E142Cc6d676e79619A43);
+    structures = Structures(0x984C5a79a47e385c0224D9617DCc69dcDdDE0DDC);
 }
     enum DeletionStatus {
         NotDeleted,
@@ -36,6 +36,61 @@ contract Chat {
         address sender;
         address receiver;
     }
+
+    struct Reply {
+       Message [] responses;
+       bool rep;
+    }
+
+    mapping (uint256 => Reply) public replies;
+
+
+     function replyTo (uint256 messageId, string memory response, Message memory messageOriginal,bool shareable) external  {
+        if (replies[messageId].responses.length == 0){
+            replies[messageId].responses.push(messageOriginal);
+            Message memory message = Message(
+                messageCount,
+            msg.sender,
+            messageOriginal.sender,
+            messageOriginal.subject,
+            response,
+            block.timestamp,
+            false,
+            shareable,
+                //0,
+                //0,
+                new address[](0),
+                messageCount,
+            messageOriginal.fileHash,
+            messageOriginal.receiversGroup,
+            DeletionStatus.NotDeleted
+            );
+            replies[messageId].responses.push(message);
+            replies[messageId].rep = true;
+        }else{
+            Message memory message = Message(
+                messageCount,
+            msg.sender,
+            messageOriginal.sender,
+            messageOriginal.subject,
+            response,
+            block.timestamp,
+            false,
+            shareable,
+                //0,
+                //0,
+                new address[](0),
+                messageCount,
+            messageOriginal.fileHash,
+            messageOriginal.receiversGroup,
+            DeletionStatus.NotDeleted
+            );
+            replies[messageId].responses.push(message);
+        }
+    }
+    
+
+
     uint256 messageCount;
     uint256 shareCount;
 

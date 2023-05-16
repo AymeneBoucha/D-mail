@@ -8,6 +8,7 @@ import { BsReplyFill  } from "react-icons/bs";
 import { BsBoxArrowUpRight  } from "react-icons/bs";
 import { BsTrashFill  } from "react-icons/bs";
 import '../assets/Inbox.css';
+import '../assets/SharesList.css';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import {contractAddressStructures, contractAddressChat} from "../App"
@@ -21,6 +22,8 @@ const Messages = () => {
   const [Name, setName] = useState("");
   const [senderEmails, setSenderEmails] = useState({});
   const [receiverEmails, setReceiverEmails] = useState({});
+  const [senderShares, setSenderShares] = useState({});
+  const [receiverShares, setReceiverShares] = useState({});
   const [showViewedbyModal, setShowViewedbyModal] = useState(false);
   const [showShares, setShowShares] = useState(false);
   const [shareList, setShareList] = useState([]);
@@ -56,20 +59,29 @@ const Messages = () => {
  
 
    const handleShareMessage = async (message) => {
-     const recipientEmails = prompt("Please enter the email addresses of the recipients, separated by commas:");
-     if (!recipientEmails || !/\S+@\S+\.\S+/.test(recipientEmails)) {
-       alert("Please enter valid email addresses.");
-       return;
-     }
-     console.log(`message:`,{message});
-     const newshare={
-       id: message.id,
-       timestamp: Date.now(),
-       sender: message.receiver,
-       receiver: recipientEmails,
-       read: false,
-     };
+    const recipientEmails = prompt("Please enter the email addresses of the recipients, separated by commas:");
+    if (!recipientEmails || !/\S+@\S+\.\S+/.test(recipientEmails)) {
+      alert("Please enter valid email addresses.");
+      return;
     }
+    console.log(`message:`,{message});
+    const newshare={
+      id: message.id,
+      timestamp: Date.now(),
+      sender: message.receiver,
+      receiver: recipientEmails,
+      read: false,
+    };
+    console.log(`share:`,{newshare});
+
+    setShares([...shares, newshare]);
+    const recipientAddresses = recipientEmails.split(",").map(email => userContract.getAddress(email));
+    const tx = await chatContract.shareMessage(message.id, recipientAddresses);
+  
+    const recipientNames = recipientEmails.split(",").join(", ");
+    console.log(`Message ${message.id} shared with recipients ${recipientNames}. Transaction hash: ${tx.transactionHash}`);
+    alert(`Message "${message.subject}" shared with recipients ${recipientNames}.`);
+  };
      async function handleShare(message) {
       const shareList = await chatContract.getShares(message.id);
       console.log(shareList);
@@ -214,6 +226,8 @@ console.log(allMessages);
 
     const senderEmails = {};
     const receiverEmails = {};
+    const senderShares = {};
+    const receiverShares = {};
     allMessages.forEach(message => {
       if (!(message.sender in senderEmails)) {
         getEmail(message.sender).then(email => setSenderEmails(prevState => ({
@@ -229,6 +243,24 @@ console.log(allMessages);
       }
     });
   }
+
+  shareList.forEach(share => {
+    if (!(share.sender in senderShares)) {
+      getEmail(share.sender).then(email => setSenderShares(prevState => ({
+        ...prevState,
+        [share.sender]: email
+      })));
+    }
+    if (!(share.receiver in receiverShares)) {
+      getEmail(share.receiver).then(email => setReceiverShares(prevState => ({
+        ...prevState,
+        [share.receiver]: email
+      })));
+    }
+  });
+
+
+
    
   function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
@@ -381,10 +413,10 @@ console.log(allMessages);
                           <div className="popup">
                             <div className="share-content">
                             <span className="close" onClick={() => setShowShares(false)}>&times;</span>
-                              <h2>Viewed By:</h2>
-                            <ul>
+                              <h2>Shared with :</h2>
+                            <ul >
                               {shareList.map((share, index) =>
-                                <li key={index}>{share.sender} shared with {share.receiver}  </li>
+                                <li key={index}  style={{width: '200%'}}><strong>{senderShares[share.sender]}</strong> shared with <strong>{receiverShares[share.receiver]} </strong> at <strong>{formatTimestamp(share.timestamp.toNumber())}</strong></li>
                               )}
                             </ul>
                           </div>
@@ -414,7 +446,7 @@ console.log(allMessages);
                   <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
                     {hoverIndex === index ? (
                       <>
-                        <button
+                      <button
                           style={{
                             background: "transparent",
                             border: "none",
@@ -422,7 +454,7 @@ console.log(allMessages);
                             marginRight: "10px",
                           }}
                         >
-                          <img src="./reply.png" width={20} height={20} />
+                          <img src="./reply.png" width={20} height={20} onClick={()=>handleShareMessage(message)}/>
                         </button>
                         <button
                           style={{

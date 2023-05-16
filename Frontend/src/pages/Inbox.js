@@ -105,6 +105,25 @@ const Inbox = () => {
     };
   }, []);
 
+  async function handleClick(title) {
+    if (title === "Inbox") {
+      // const usersAccounts = await getAllUsers();
+      // setUsers(usersAccounts);
+      // setSelectedButton(title);
+      // console.log(usersAccounts);
+    } else if (title === "Sent") {
+      // const usersIDs = await getAllUsersIDs();
+      // setUsers(usersIDs);
+      // setSelectedButton(title);
+      // console.log(usersIDs);
+    } else if (title === "Programmed") {
+      // Perform action for "Archive" button
+    } else if (title === "Drafts") {
+      // Perform action for "Archive" button
+    }
+    // Add more conditions for other buttons if needed
+  }
+
   const buttons = [
     
     { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Inbox" },
@@ -113,11 +132,7 @@ const Inbox = () => {
       icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
     },
     
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Spam" },
     { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
-    {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Favourites",
-    },
   ];
 
   const [hoverIndex, setHoverIndex] = useState(null);
@@ -138,17 +153,20 @@ const Inbox = () => {
             </div>
           </button>
           </div>
-          <div className="pl-6 pt-4 flex items-center space-x-6">
-      {buttons.map((button) => (
-        <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-          <div className="flex items-center" >
-            {button.icon}
-            <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-            
-          </div>
-        </div>
-      ))}
-    </div>
+          <div className="pl-6 pt-4 flex flex-col items-start space-y-6" style={{display: 'flex', flexDirection: 'column'}}>
+  {buttons.map((button) => (
+    <button key={button.title} className="text-gray-600 flex items-center gap-6" onClick={() => handleClick(button.title)} style={{borderRadius: 10, marginTop: 10, padding: '10px', border:'none', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'}}
+    onMouseEnter={(e) => (e.target.style.backgroundColor = "#FB723F")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FFF")}
+    >
+ 
+    {button.icon}
+    {button.title}
+
+     
+    </button>
+  ))}
+</div>
           </div>
         </div>
       </div>

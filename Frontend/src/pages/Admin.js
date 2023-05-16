@@ -16,7 +16,7 @@ const Admin = () => {
   const [name, setName] = useState("");
   const [showAddUser, setShowAddUser] = useState(false);
   const [NewUsers, setNewUsers] = useState({});
-
+  const [selectedButton, setSelectedButton] = useState("Users Accounts");
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
@@ -28,19 +28,41 @@ const Admin = () => {
     });
     const result = await userContract.getName(accounts[0]);
     setName(result);
-
     const allUsers = await userContract.getAllUsers();
     setUsers(allUsers);
   }
+
+  async function getAllUsers() {
+    const allUsers = await userContract.getAllUsers();
+    return allUsers;
+  }
+
+  async function getAllUsersIDs() {
+    const allUsersIDs = await userContract.getAllUsersIDs();
+    return allUsersIDs;
+  }
+
 
   const handleCreateUser = () => {
     window.location.href = "/name";
   };
 
-    const handleClick = (title) => {
-      // Perform the desired action when a button is clicked
-      console.log(`Button clicked: ${title}`);
-    };
+  async function handleClick(title) {
+    if (title === "Users Accounts") {
+      const usersAccounts = await getAllUsers();
+      setUsers(usersAccounts);
+      setSelectedButton(title);
+      console.log(usersAccounts);
+    } else if (title === "Users IDs") {
+      const usersIDs = await getAllUsersIDs();
+      setUsers(usersIDs);
+      setSelectedButton(title);
+      console.log(usersIDs);
+    } else if (title === "Archive") {
+      // Perform action for "Archive" button
+    }
+    // Add more conditions for other buttons if needed
+  }
 
   useEffect(() => {
     getName();
@@ -78,7 +100,7 @@ const Admin = () => {
               onMouseLeave={(e) => (e.target.style.backgroundColor = "#FFF")}
     >
  
-        {button.icon}
+     {button.icon}
 
             {button.title}
 
@@ -137,6 +159,7 @@ const Admin = () => {
                       backgroundColor: user.exist ? "white" : "ghostwhite",
                     }}
                   >
+                  {selectedButton === 'Users Accounts' && (
                     <div>
                       <div className="row">
                         <div className="col-12"><strong><FaRegUser className="w-40 h-40 mr-3"/>
@@ -148,6 +171,18 @@ const Admin = () => {
                         
                       </div>
                     </div>
+                  )}
+                  {selectedButton === 'Users IDs' && (
+                    <div>
+                      <div className="row">
+                        <div className="col-12"><strong><MdOutlineMail className="w-40 h-40 mr-3"/>
+                           {user.email}</strong></div>
+                        <div className="col-12"><strong><BsWallet className="w-40 h-40 mr-3"/></strong>
+                           {user.ID}</div>
+                        
+                      </div>
+                    </div>
+                  )}
                     <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
                       {hoverIndex === index ? (
                         <>

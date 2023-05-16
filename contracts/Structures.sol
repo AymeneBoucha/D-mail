@@ -15,7 +15,14 @@ contract Structures {
         bytes pubKey;
     }
 
-   mapping(bytes32 => string) public IDs;
+    struct ID {
+        bytes32 ID;
+        string email;
+    }
+
+    ID[] public IDs;
+
+   //mapping(bytes32 => string) public IDs;
     mapping(address => Secure) public Keys;
     mapping(address => User) public users;
     address[] public userAddresses;
@@ -37,7 +44,8 @@ contract Structures {
     }
 
     function createUserId(string memory email, bytes32 Id) public onlyAdmin {
-        IDs[Id] = email;
+        ID memory id =  ID(Id, email);
+        IDs.push(id);
     }
 
     // Define a new role for admins
@@ -66,16 +74,16 @@ contract Structures {
         return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 
-    function verifyUser(
-        uint id,
-        string memory email
-    ) public view returns (bool) {
-        require(
-            stringsEqual(IDs[sha256(abi.encode(id))], email),
-            "You don't have permission to create an account !"
-        );
-        return true;
+    function verifyUser(uint id, string memory email) public view returns (bool) {
+    bytes32 idHash = sha256(abi.encode(id));
+    for (uint256 i = 0; i < IDs.length; i++) {
+        if (IDs[i].ID == idHash && stringsEqual(IDs[i].email, email)) {
+            return true;
+        }
     }
+    revert("You don't have permission to create an account!");
+}
+
 
     //Creat user
     function createUser(
@@ -95,8 +103,18 @@ contract Structures {
         usersByName[name] = walletAddress;
         usersByEmail[email] = walletAddress;
         Keys[walletAddress] = secure;
-        delete IDs[sha256(abi.encode(Id))];
-        // emit UserCreated(name, walletAddress);
+        bytes32 idHash = sha256(abi.encode(Id));
+    for (uint256 i = 0; i < IDs.length; i++) {
+        if (IDs[i].ID == idHash) {
+            uint256 lastIndex = IDs.length - 1;
+            if (i != lastIndex) {
+                IDs[i] = IDs[lastIndex];
+            }
+            IDs.pop();
+            return;
+        }
+    }
+    revert("ID not found");
     }
 
     //Delete user
@@ -175,6 +193,18 @@ contract Structures {
         return allUsers;
     }
 
+     function getAllUsersIDsBackup() public view returns (ID[] memory) {
+        ID[] memory IDsBackup = new ID[](IDs.length);
+        for (uint i = 0; i < IDs.length; i++) {
+            IDsBackup[i] = IDs[i];
+        }
+        return IDsBackup;
+    }
+
+    function getAllUsersIDs() public view returns (ID[] memory) {
+        return IDs;
+    }
+
     function editUser(
         address walletAddress,
         string memory name,
@@ -192,8 +222,6 @@ contract Structures {
         usersByName[name] = walletAddress;
         usersByEmail[email] = walletAddress;
     
-    
     }
-    
 
 }
