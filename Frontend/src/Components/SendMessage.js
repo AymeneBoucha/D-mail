@@ -27,11 +27,16 @@ const SendMessage = () => {
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
+  const [showCCI, setShowCCI] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
   const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+
+  const handleClick = () => {
+    setShowCCI(!showCCI);
+  };
   
   function encryptMessage(plaintext, pubKey, priKey) {
      const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
@@ -203,7 +208,6 @@ const SendMessage = () => {
 
   getAllUsers();
 
- 
 
   return (
     <div className="card-body p-0 text-center m-2" style={{ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
@@ -237,7 +241,11 @@ const SendMessage = () => {
   onChange={(e) => setEmailReceiver(e.target.value)}
   required
 />
+<div onClick={handleClick} style={{ textDecoration: 'underline', cursor: 'pointer' }}>
+        CCI
+      </div>
 
+      {showCCI && (
 <input
   type="text"
   className="form-control form-control-lg mb-1"
@@ -259,13 +267,7 @@ const SendMessage = () => {
   onChange={(e) => setCCI(e.target.value)}
   required
 />
-
-
-
-
-
-
-
+      )}
         </div>
         <div className="form-group">
           <label htmlFor="subject" className="sr-only">

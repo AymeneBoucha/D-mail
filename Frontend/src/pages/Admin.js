@@ -33,13 +33,22 @@ const Admin = () => {
     setUsers(allUsers);
   }
 
+  const handleCreateUser = () => {
+    window.location.href = "/name";
+  };
+
+    const handleClick = (title) => {
+      // Perform the desired action when a button is clicked
+      console.log(`Button clicked: ${title}`);
+    };
+
   useEffect(() => {
     getName();
   }, []);
   const buttons = [
     
-    { icon: <MdManageAccounts className="w-[1.7rem]  h-[1.7rem]" />, title: "Users" },
-    { icon: <MdGroups className="w-[1.7rem]  h-[1.7rem]" />, title: "Groups" },
+    { icon: <MdManageAccounts className="w-[1.7rem]  h-[1.7rem]" />, title: "Users Accounts" },
+    { icon: <MdGroups className="w-[1.7rem]  h-[1.7rem]" />, title: "Users IDs" },
     
     { icon: <BsArchiveFill className="w-[1.7rem]  h-[1.7rem]" />, title: "Archive" },
   ];
@@ -55,24 +64,29 @@ const Admin = () => {
             <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
               <div style={{position: 'fixed', top: 60, left: 17,}}>
                 <div style={{ padding: '20px 10px', marginLeft: -15 }}>
-                  <button className="btn btn-primary btn-orange btn-lg" style={{ backgroundColor: '#FB723F', borderRadius: '30px', height: 60 }} >
+                  <button className="btn btn-primary btn-orange btn-lg" style={{ backgroundColor: '#FB723F', borderRadius: '30px', height: 60 }} onClick={handleCreateUser}>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
                       <BsPersonFillAdd className="w-10 h-10 mr-2"/>
                       <p style={{fontSize:'1.2em',}} className="text-white m-0">Add User</p>
                     </div>
                   </button>
                 </div>
-                <div className="pl-6 pt-4 flex items-center space-x-6">
-                  {buttons.map((button) => (
-                    <div key={button.title} className="text-gray-600 flex items-center gap-6" style={{marginTop: 6}}>
-                      <div className="flex items-center" >
-                        {button.icon}
-                        <span className="font-semibold ml-2" style={{position: 'relative', top: -4}}>{button.title}</span>
-                        
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div className="pl-6 pt-4 flex flex-col items-start space-y-6" style={{display: 'flex', flexDirection: 'column'}}>
+  {buttons.map((button) => (
+    <button key={button.title} className="text-gray-600 flex items-center gap-6" onClick={() => handleClick(button.title)} style={{borderRadius: 10, marginTop: 10, padding: '10px', border:'none', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'}}
+    onMouseEnter={(e) => (e.target.style.backgroundColor = "#FB723F")}
+              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FFF")}
+    >
+ 
+        {button.icon}
+
+            {button.title}
+
+     
+    </button>
+  ))}
+</div>
+
               </div>
             </div>
         </div>
@@ -172,64 +186,6 @@ const Admin = () => {
         </div>
       )}
         </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          
        
         </div>
      </div>

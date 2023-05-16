@@ -21,6 +21,11 @@ const Messages = () => {
   const [Name, setName] = useState("");
   const [senderEmails, setSenderEmails] = useState({});
   const [receiverEmails, setReceiverEmails] = useState({});
+  const [showViewedbyModal, setShowViewedbyModal] = useState(false);
+  const [showShares, setShowShares] = useState(false);
+  const [shareList, setShareList] = useState([]);
+  const [viewedbyList, setViewedbyList] = useState([]);
+  const [shares, setShares] = useState([]);
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showMessage, setShowMessage] = useState(false);
   const [selectedMessage, setSelectedMessage]= useState({});
@@ -39,6 +44,44 @@ const Messages = () => {
     setSelectedMessage({});
   };
 
+  async function handleSelectedMessage  (message) {
+
+    setSelectedMessage(message);
+    console.log(message.id);
+    if(message.read == false){
+    const tx = await chatContract.viewMessage(message.id)
+    }
+   }; 
+
+ 
+
+   const handleShareMessage = async (message) => {
+     const recipientEmails = prompt("Please enter the email addresses of the recipients, separated by commas:");
+     if (!recipientEmails || !/\S+@\S+\.\S+/.test(recipientEmails)) {
+       alert("Please enter valid email addresses.");
+       return;
+     }
+     console.log(`message:`,{message});
+     const newshare={
+       id: message.id,
+       timestamp: Date.now(),
+       sender: message.receiver,
+       receiver: recipientEmails,
+       read: false,
+     };
+    }
+     async function handleShare(message) {
+      const shareList = await chatContract.getShares(message.id);
+      console.log(shareList);
+      setShowShares(true);
+      setShareList(shareList);
+    }
+
+    async function handleView(message) {
+      const viewedby = await chatContract.getViewedBy(message.id);
+      setShowViewedbyModal(true);
+      setViewedbyList(viewedby);
+    }
 
   async function DeleteMessage  (message) {
 
@@ -65,11 +108,6 @@ const Messages = () => {
     
    };
 
-   const  handleSelectedMessage = (message) => {
-
-    setSelectedMessage(message);
-    
-   };
 
   async function getRecieverPubKey(address) {
     const pubKeyX = await userContract.getRecieverPubKey(address);
@@ -314,9 +352,10 @@ console.log(allMessages);
                       justifyContent: "space-between",
                       backgroundColor: message.read ? "white" : "ghostwhite",
                     }}
+                  
                   >
                     <div>
-                      <div className="row">
+                      <div className="row" >
                         <div className="col-md-12">
                           <strong>From :</strong> {senderEmails[message.sender]}
                           <br/>
@@ -334,6 +373,42 @@ console.log(allMessages);
                             <br/>
                       </div>
                       
+                      <div className="col-md-12">
+                        <button onClick={() => handleShare(message)}>partage</button>
+                        {showShares && (
+                          <div>
+                        {shareList.length > 0 &&
+                          <div className="popup">
+                            <div className="share-content">
+                            <span className="close" onClick={() => setShowShares(false)}>&times;</span>
+                              <h2>Viewed By:</h2>
+                            <ul>
+                              {shareList.map((share, index) =>
+                                <li key={index}>{share.sender} shared with {share.receiver}  </li>
+                              )}
+                            </ul>
+                          </div>
+                          </div>
+                        }
+                        </div>)}
+                      </div>
+                      <div className="col-md-12">
+                        <button onClick={() => handleView(message)} style={{zIndex:"50"}}>vu</button>
+                        {showViewedbyModal && (
+                          <div className="popup">
+                            <div className="view-content">
+                              <span className="close" onClick={() => setShowViewedbyModal(false)}>&times;</span>
+                              <h2>Viewed By:</h2>
+                              <ul>
+                                {viewedbyList.map((viewer, index) => (
+                                  <li key={index}>{viewer}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                     </div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
