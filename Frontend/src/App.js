@@ -16,9 +16,10 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddressStructures =  '0x984C5a79a47e385c0224D9617DCc69dcDdDE0DDC';
-const contractAddressChat = '0x46a112caaB7ce8D155A090094e99820D08A77A82';
-export { contractAddressStructures, contractAddressChat };
+const contractAddressStructures =  '0x6C330e24A6BDfDf8017994C134E20FE35C38D03A';
+const contractAddressChat = '0x1690926D949E258f61b9095EFAA0bF0D34A71171';
+const contractAddressOperations = '0xACfA2f1a9F7E3b54A6cAe2322b23ece319cB226A';
+export { contractAddressStructures, contractAddressChat, contractAddressOperations };
 
 function App() {
   const [name, setName] = useState('');

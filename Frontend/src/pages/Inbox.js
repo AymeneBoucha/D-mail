@@ -22,26 +22,40 @@ const curve = new ec('secp256k1');
 
 const Inbox = () => {
   const [messages, setMessages] = useState([]);
-  const [name, setName] = useState("");
-  const [senderEmails, setSenderEmails] = useState({});
-  const [receiverEmails, setReceiverEmails] = useState({});
   const [showSendMessage, setShowSendMessage] = useState(false);
+
+  const buttons = [
+    
+    { icon: <div style={{marginTop: 5}}><FaInbox className="w-[1.7rem]  h-[1.7rem]" /></div>, title: "Inbox" },
+    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Sent" },
+     {
+      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
+    },
+    
+    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
+  ];
+
+  const [selectedButton, setSelectedButton] = useState(buttons[0].title);
  
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
   const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+
+  const handleClick = (buttonTitle) => {
+    setSelectedButton(buttonTitle);
+  };
   
   const handleSendMessage = (message) => {
-    const newMessage = {
-      sender:message.sender,
-      receiver: message.receiver,
-      subject: message.subject,
-      body: message.message,
-      timestamp: message.timestamp,
-      read: message.read
-    };
-    setMessages([...messages, newMessage]);
+    // const newMessage = {
+    //   sender:message.sender,
+    //   receiver: message.receiver,
+    //   subject: message.subject,
+    //   body: message.message,
+    //   timestamp: message.timestamp,
+    //   read: message.read
+    // };
+    //setMessages([...messages, newMessage]);
     setShowSendMessage(false);
     console.log('messages',messages);
   };
@@ -49,50 +63,6 @@ const Inbox = () => {
   const handleToggleSendMessage = () => {
     setShowSendMessage(!showSendMessage);
   };
-
-  async function getRecieverPubKey(address) {
-    const pubKeyX = await userContract.getRecieverPubKey(address);
-    //console.log(pubKeyX);
-   // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
-    //const pubKey = bytes32PubKeyInverse.toString('hex');
-    const pubKey = pubKeyX.slice(2);
-    return pubKey;
-   }
-
-   async function getSenderPriKey(address){
-    const email = await userContract.getEmail(address);
-    const priKey = sessionStorage.getItem('PrivateKey.'+email);
-    return priKey;
-   }
-
-  function decryptMessage(ciphertextt, pubKey, priKey) {
-    const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
-    const ciphertext = Buffer.from(ciphertextt, 'base64');
-    const iv = ciphertext.slice(0, 16);
-    const encryptedMessage = ciphertext.slice(16);
-    const encryptionKey = sharedSecret.toString('hex').substr(0, 32);
-    const decipher = crypto.createDecipheriv('aes-256-cbc', encryptionKey, iv);
-    const decryptedMessage = Buffer.concat([decipher.update(encryptedMessage), decipher.final()]);
-    const final = decryptedMessage.toString('utf8');
-    return final;
-  };
-
-  
-  function formatTimestamp(timestamp) {
-    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
-    const year = date.getFullYear();
-    const month = ("0" + (date.getMonth() + 1)).slice(-2); // Add leading zero to month
-    const day = ("0" + date.getDate()).slice(-2); // Add leading zero to day
-    const hours = ("0" + date.getHours()).slice(-2); // Add leading zero to hours
-    const minutes = ("0" + date.getMinutes()).slice(-2); // Add leading zero to minutes
-    const seconds = ("0" + date.getSeconds()).slice(-2); // Add leading zero to seconds
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-  }
-
-  async function getEmail(adresse) {
-    const result = await userContract.getEmail(adresse);
-    return result;
-  }
 
   useEffect(() => {
    // getName();
@@ -105,35 +75,8 @@ const Inbox = () => {
     };
   }, []);
 
-  async function handleClick(title) {
-    if (title === "Inbox") {
-      // const usersAccounts = await getAllUsers();
-      // setUsers(usersAccounts);
-      // setSelectedButton(title);
-      // console.log(usersAccounts);
-    } else if (title === "Sent") {
-      // const usersIDs = await getAllUsersIDs();
-      // setUsers(usersIDs);
-      // setSelectedButton(title);
-      // console.log(usersIDs);
-    } else if (title === "Programmed") {
-      // Perform action for "Archive" button
-    } else if (title === "Drafts") {
-      // Perform action for "Archive" button
-    }
-    // Add more conditions for other buttons if needed
-  }
 
-  const buttons = [
-    
-    { icon: <FaInbox className="w-[1.7rem]  h-[1.7rem]" />, title: "Inbox" },
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Sent" },
-     {
-      icon: <MdLabelImportant className="w-[1.7rem]  h-[1.7rem]" />,title: "Programmed",
-    },
-    
-    { icon: <FaStar className="w-[1.7rem]  h-[1.7rem]" />, title: "Drafts" },
-  ];
+
 
   const [hoverIndex, setHoverIndex] = useState(null);
 
@@ -154,24 +97,38 @@ const Inbox = () => {
           </button>
           </div>
           <div className="pl-6 pt-4 flex flex-col items-start space-y-6" style={{display: 'flex', flexDirection: 'column'}}>
-  {buttons.map((button) => (
-    <button key={button.title} className="text-gray-600 flex items-center gap-6" onClick={() => handleClick(button.title)} style={{borderRadius: 10, marginTop: 10, padding: '10px', border:'none', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'}}
-    onMouseEnter={(e) => (e.target.style.backgroundColor = "#FB723F")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FFF")}
-    >
- 
-    {button.icon}
-    {button.title}
+          {buttons.map((button) => (
+            <button
+  key={button.title}
+  className={`text-gray-600 flex items-center gap-6 ${selectedButton === button.title ? 'active' : ''}`}
+  onClick={() => handleClick(button.title)}
+  style={{
+    display: 'flex',
+    alignItems: 'center',
+    borderRadius: 10,
+    marginTop: 10,
+    padding: '10px',
+    border: 'none',
+    backgroundColor: selectedButton === button.title ? '#FB723F' : 'white',
+    color: selectedButton === button.title ? 'white' : 'initial',
+    cursor: 'pointer',
+    textAlign: 'left',
+  }}
+  onMouseEnter={(e) => (e.target.style.backgroundColor = "#FB723F")}
+  onMouseLeave={(e) => (e.target.style.backgroundColor = selectedButton === button.title ? '#FB723F' : '#FFF')}
+>
+ {button.icon} &nbsp;
+ {button.title}
+</button>
 
-     
-    </button>
-  ))}
+))}
+
 </div>
           </div>
         </div>
       </div>
       <div className="col-md-12">
-      <Messages/>
+      <Messages selectedButton={selectedButton} />
       
     </div>
             <div className="col-md-12">

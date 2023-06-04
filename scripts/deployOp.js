@@ -10,13 +10,13 @@ const { ethers } = require('hardhat');
 
 async function main() {
  
-  const UserAccount = await hre.ethers.getContractFactory("UserAccount");
-  const userAccount = await UserAccount.deploy();
+  const Operations = await hre.ethers.getContractFactory("Operations");
+  const operations = await Operations.deploy();
 
-  await userAccount.deployed();
+  await operations.deployed();
 
   console.log(
-    `UserAccount contract deployed to ${userAccount.address}`
+    `Operations contract deployed to ${operations.address}`
   );
 }
 

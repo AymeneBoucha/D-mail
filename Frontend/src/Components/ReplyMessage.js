@@ -11,10 +11,8 @@ const BigNumber = require('bignumber.js');
 
 const curve = new ec('secp256k1');
 
-const SendMessage = () => {
+const ReplyMessage = ( {selectedMessage} ) => {
   const [emailReceiver, setEmailReceiver] = useState("");
-  const [cci, setCCI] = useState("");
-  const [subject, setSubject] = useState("");
   const [fileImg, setFileImg] = useState(null);
   const [body, setBody] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
@@ -23,7 +21,6 @@ const SendMessage = () => {
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState("");
   const [isMinimized, setIsMinimized] = useState(false);
-  const [shareable, setShareable]= useState("");
   const [showCCI, setShowCCI] = useState(false);
   const [datetime, setDatetime] = useState('');
   const [showDatetimeInput, setShowDatetimeInput] = useState(false);
@@ -92,22 +89,14 @@ const SendMessage = () => {
     return ReceiversPubKeys;
    }
 
-   async function setEncryptedMessages(message, pubKeys, priKey){
-    const encryptedMessages = [];
-    for(let i = 0; i < pubKeys.length; i++){
-      const encryptedMessage = encryptMessage(message, pubKeys[i], priKey);
-      encryptedMessages.push(encryptedMessage);
-    }
-    return encryptedMessages;
-   }
 
-  async function sendMessage(event) {
+  async function replyMessage(event) {
     event.preventDefault();
 
     if (fileImg) {
       try {
 
-          const formData = new FormData();
+          /*const formData = new FormData();
           formData.append("file", fileImg);
 
           console.log("before axios");
@@ -144,7 +133,7 @@ const SendMessage = () => {
     console.log(tx.hash);
 
     setIsExecuted(true);
-    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);*/
   } catch (error) {
     console.log("Error sending File to IPFS: ")
     console.log(error);
@@ -165,40 +154,18 @@ const SendMessage = () => {
   const receiversArray = getReceiversAddresses(emailReceiver);
   console.log(receiversArray);
 
-    const receiversAddresses = await getReceiversAddresses(emailReceiver);
-    if(receiversAddresses.length == 1){
-      const pubKey = await getRecieverPubKey(receiversAddresses[0]);
-      const encryptedMessage = encryptMessage(body, pubKey, priKey);
+      const pubKey = await getRecieverPubKey(selectedMessage.sender);
+      const encryptedResponse = encryptMessage(body, pubKey, priKey);
+      const encryptedSelected = selectedMessage;
+      encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
+      console.log(encryptedSelected.message);
       if (datetime == ''){
-        const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, shareable, '', emailReceiver, 0);
+        const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, 0);
         //setIsMessageSent(true);
       }else{
-        console.log("timestamp : " + parseTimestamp(datetime));
-        const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, shareable, '', emailReceiver, parseTimestamp(datetime));
+        const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, parseTimestamp(datetime));
       }
       
-    }else{
-      const pubKeys = await getRecieversPubKey(receiversAddresses)
-      console.log("\n\n\n" + body, pubKeys, priKey);
-      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
-      if(cci === ""){
-        if (datetime == ''){
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [], '', '', emailReceiver, [], 0);
-        }else{
-          const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [], '', '', emailReceiver, [], parseTimestamp(datetime));
-        }
-      }
-      else{
-        const cciReceivers = await getReceiversAddresses(cci);
-        const pubKeys = await getRecieversPubKey(cciReceivers)
-      const encryptedCCiMessages = await setEncryptedMessages(body, pubKeys, priKey)
-      if (datetime == ''){
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', '', emailReceiver, cciReceivers, 0);
-      }else{
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', '', emailReceiver, cciReceivers, parseTimestamp(datetime));
-      }
-      }
-  }
   setIsLoading(false);
 }catch(error){
   setIsLoading(false);
@@ -235,7 +202,20 @@ const SendMessage = () => {
     const timestamp = Math.floor(new Date(timestampString).getTime() / 1000); // Convert milliseconds to seconds and round
     return new BigNumber(timestamp).toNumber();
     }
-  
+
+    async function getEmail() {
+        const result = await userContract.getEmail(selectedMessage.sender);
+        return result;
+      }
+      
+      useEffect(() => {
+        async function fetchEmail() {
+          const email = await getEmail();
+          setEmailReceiver(email);
+        }
+        fetchEmail();
+      }, [selectedMessage]);
+      
 
   getAllUsers();
 
@@ -244,7 +224,7 @@ const SendMessage = () => {
     <div className="card-body p-0 text-center m-2" style={{/*display: isMessageSent ? "none" : "block",*/ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
   <div className="card-header bg-dark text-white" style={{borderRadius: "8px 8px 0 0", cursor: "pointer"}} onClick={() => setIsMinimized(!isMinimized)}>
   
-  <h5 className="mt-0">New Message</h5>
+  <h5 className="mt-0">Reply to Message</h5>
 </div>
 
 <div className="send-message card p-0" style={{height: isMinimized ? "3px" : "auto"}}>
@@ -273,50 +253,9 @@ const SendMessage = () => {
   value={emailReceiver}
   onChange={(e) => setEmailReceiver(e.target.value)}
   required
+  disabled
 />
-<div onClick={handleClick} style={{ textDecoration: 'underline', cursor: 'pointer' }}>
-        CCI
-      </div>
-
-      {showCCI && (
-<input
-  type="text"
-  className="form-control form-control-lg mb-1"
-  id="cci"
-  placeholder="cci"
-  style={{
-    border: "none",
-    backgroundColor:
-      cci.length >= 6
-        ? cci
-            .split(/[,\s]+/) // Splitting the input by commas or spaces
-            .filter((email) => email.trim() !== "") // Filter out empty strings after splitting
-            .every((email) => usersEmails.includes(email)) // Checking if every entered email is in the 'emails' array
-            ? "#CFF3C1"
-            : "#FFCACA"
-        : "",
-  }}
-  value={cci}
-  onChange={(e) => setCCI(e.target.value)}
-  required
-/>
-      )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="subject" className="sr-only">
-            Title:
-          </label>
-          <input
-            type="text"
-            className="form-control mb-1"
-            id="subject"
-            placeholder="Subject"
-            style={{ border: "none" }}
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            required
-          />
-        </div>
+</div>
         <div className="form-group">
           <label htmlFor="body" className="sr-only">
             Message:
@@ -332,22 +271,6 @@ const SendMessage = () => {
             required
           />
         </div>
-
-        <div className="form-group">
-      <label htmlFor="shareable" className="switch-label">
-        Is the Message shareable?
-      </label>
-      <label className="switch">
-        <input
-          type="checkbox"
-          id="shareable"
-          checked={shareable}
-          onChange={(e) => setShareable(e.target.checked)}
-        />
-        <span className="slider"></span>
-      </label>
-      
-    </div>
 
         <div className="form-group d-flex justify-content-between align-items-center">
         <div className="btn-group d-flex align-items-center">
@@ -414,7 +337,7 @@ const SendMessage = () => {
               }}
               onMouseEnter={(e) => (e.target.style.backgroundColor = "#F64A0B")}
               onMouseLeave={(e) => (e.target.style.backgroundColor = "#FB723F")}
-              onClick={sendMessage}
+              onClick={replyMessage}
             >
               <img
                 src="send.png"
@@ -437,4 +360,4 @@ const SendMessage = () => {
   );
 };
 
-export default SendMessage;
+export default ReplyMessage;

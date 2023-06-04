@@ -3,6 +3,7 @@ import MessageDetails from './MessagesDetails';
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
+import OperationsContract from '../Operations.sol/Operations.json';
 import { BsArrowLeft  } from "react-icons/bs";
 import { BsReplyFill  } from "react-icons/bs";
 import { BsBoxArrowUpRight  } from "react-icons/bs";
@@ -11,12 +12,13 @@ import '../assets/Inbox.css';
 import '../assets/SharesList.css';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
-import {contractAddressStructures, contractAddressChat} from "../App"
+import {contractAddressStructures, contractAddressChat, contractAddressOperations} from "../App"
+import ReplyMessage from '../Components/ReplyMessage';
 const curve = new ec('secp256k1');
 
 
 
-const Messages = () => {
+const Messages = ( { selectedButton } ) => {
   const [messages, setMessages] = useState([]);
   const [Email, setEmail] = useState("");
   const [Name, setName] = useState("");
@@ -34,11 +36,14 @@ const Messages = () => {
   const [selectedMessage, setSelectedMessage]= useState({});
   const [counter, setCounter]= useState(0);
   const [showSendMessage, setShowSendMessage] = useState(false);
+  const [showReplyMessage, setShowReplyMessage] = useState(false);
+
   //var counter=0;
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
   const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+  const opContract = new ethers.Contract(contractAddressOperations , OperationsContract.abi, signer);
 
   const backToMessages = () => {
     console.log("going back");
@@ -56,7 +61,15 @@ const Messages = () => {
     }
    }; 
 
- 
+   const handleReplyMessage = (message) => {
+    
+    setShowReplyMessage(false);
+    console.log('messages',messages);
+  };
+
+   const handleToggleReplyMessage = () => {
+    setShowReplyMessage(!showReplyMessage);
+  };
 
    const handleShareMessage = async (message) => {
     const recipientEmails = prompt("Please enter the email addresses of the recipients, separated by commas:");
@@ -161,7 +174,198 @@ const Messages = () => {
   }, [selectedMessage]);
 
   
+ async function getInboxMessages(){
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const result = await userContract.getEmail(accounts[0]);
+  setEmail(result);
+  const result2 = await userContract.getName(accounts[0]);
+  setName(result2);
  
+  const MyPriKey = await getSenderPriKey(accounts[0]);
+
+  const messagesReceived = await opContract.MessageReceived(result);
+  const DecryptedMessagesReceived = [];
+
+  for (let i = 0; i < messagesReceived.length; i++) {
+    if (messagesReceived[i].timestamp <= Math.floor(Date.now() / 1000)) {
+      const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
+      const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
+      const newMessage = {
+        ...messagesReceived[i],
+        message: decryptedMessage,
+      };
+      DecryptedMessagesReceived.push(newMessage);
+    }
+  }
+
+  const keepUniqueMessages = (messages) => {
+    const uniqueMessages = [];
+    for (const message of messages) {
+      if (!uniqueMessages.some((otherMessage) => {
+        return formatTimestamp(message.timestamp) === formatTimestamp(otherMessage.timestamp) &&
+          message.sender === otherMessage.sender &&
+          message.receivers_group === otherMessage.receivers_group;
+      })) {
+        uniqueMessages.push(message);
+      }
+    }
+    return uniqueMessages;
+  };
+
+  const allMessages = [...keepUniqueMessages(DecryptedMessagesReceived)];
+    allMessages.sort((a, b) => b.timestamp - a.timestamp); 
+   console.log(allMessages);
+    setMessages(allMessages);
+
+    const senderEmails = {};
+    const receiverEmails = {};
+    allMessages.forEach(message => {
+      if (!(message.sender in senderEmails)) {
+        getEmail(message.sender).then(email => setSenderEmails(prevState => ({
+          ...prevState,
+          [message.sender]: email
+        })));
+      }
+      if (!(message.receiver in receiverEmails)) {
+        getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
+          ...prevState,
+          [message.receiver]: email
+        })));
+      }
+    });
+ }
+
+ async function getSentMessages(){
+  
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const result = await userContract.getEmail(accounts[0]);
+  setEmail(result);
+  const result2 = await userContract.getName(accounts[0]);
+  setName(result2);
+ 
+  const MyPriKey = await getSenderPriKey(accounts[0]);
+
+  const messagesSent = await opContract.MessageSent(result);
+  const DecryptedMessagesSent = [];
+
+  for (let i = 0; i < messagesSent.length; i++) {
+    if (messagesSent[i].timestamp <= Math.floor(Date.now() / 1000)) {
+      const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
+      const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
+      const newMessage = {
+        ...messagesSent[i],
+        message: decryptedMessage,
+      };
+      DecryptedMessagesSent.push(newMessage);
+    }
+  }
+
+  const keepUniqueMessages = (messages) => {
+    const uniqueMessages = [];
+    for (const message of messages) {
+      if (!uniqueMessages.some((otherMessage) => {
+        return formatTimestamp(message.timestamp) === formatTimestamp(otherMessage.timestamp) &&
+          message.sender === otherMessage.sender &&
+          message.receivers_group === otherMessage.receivers_group;
+      })) {
+        uniqueMessages.push(message);
+      }
+    }
+    return uniqueMessages;
+  };
+
+  const allMessages = [...keepUniqueMessages(DecryptedMessagesSent)];
+    allMessages.sort((a, b) => b.timestamp - a.timestamp); 
+    setMessages(allMessages);
+
+    const senderEmails = {};
+    const receiverEmails = {};
+    allMessages.forEach(message => {
+      if (!(message.sender in senderEmails)) {
+        getEmail(message.sender).then(email => setSenderEmails(prevState => ({
+          ...prevState,
+          [message.sender]: email
+        })));
+      }
+      if (!(message.receiver in receiverEmails)) {
+        getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
+          ...prevState,
+          [message.receiver]: email
+        })));
+      }
+    });
+
+ }
+
+ async function getProgrammedMessages(){
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const result = await userContract.getEmail(accounts[0]);
+  setEmail(result);
+  const result2 = await userContract.getName(accounts[0]);
+  setName(result2);
+ 
+  const MyPriKey = await getSenderPriKey(accounts[0]);
+
+  const messagesSent = await opContract.MessageSent(result);
+  const DecryptedMessagesSent = [];
+
+  for (let i = 0; i < messagesSent.length; i++) {
+    if (messagesSent[i].timestamp > Math.floor(Date.now() / 1000)) {
+      const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
+      const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
+      const newMessage = {
+        ...messagesSent[i],
+        message: decryptedMessage,
+      };
+      DecryptedMessagesSent.push(newMessage);
+    }
+  }
+
+  const keepUniqueMessages = (messages) => {
+    const uniqueMessages = [];
+    for (const message of messages) {
+      if (!uniqueMessages.some((otherMessage) => {
+        return formatTimestamp(message.timestamp) === formatTimestamp(otherMessage.timestamp) &&
+          message.sender === otherMessage.sender &&
+          message.receivers_group === otherMessage.receivers_group;
+      })) {
+        uniqueMessages.push(message);
+      }
+    }
+    return uniqueMessages;
+  };
+
+  const allMessages = [...keepUniqueMessages(DecryptedMessagesSent)];
+    allMessages.sort((a, b) => b.timestamp - a.timestamp); 
+    setMessages(allMessages);
+
+    const senderEmails = {};
+    const receiverEmails = {};
+    allMessages.forEach(message => {
+      if (!(message.sender in senderEmails)) {
+        getEmail(message.sender).then(email => setSenderEmails(prevState => ({
+          ...prevState,
+          [message.sender]: email
+        })));
+      }
+      if (!(message.receiver in receiverEmails)) {
+        getEmail(message.receiver).then(email => setReceiverEmails(prevState => ({
+          ...prevState,
+          [message.receiver]: email
+        })));
+      }
+    });
+ }
+
+ async function getDraftsMessages(){
+  
+ }
 
 
   async function getName() {
@@ -175,34 +379,36 @@ const Messages = () => {
    
     const MyPriKey = await getSenderPriKey(accounts[0]);
 
-    const messagesReceived = await chatContract.MessageReceived(result);
-    const messagesSent = await chatContract.MessageSent(result);
+    const messagesReceived = await opContract.MessageReceived(result);
+    const messagesSent = await opContract.MessageSent(result);
     const DecryptedMessagesReceived = [];
     const DecryptedMessagesSent = [];
-    for (let i = 0; i < messagesReceived.length; i++){
-      const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
-      //console.log("get pubKeyR : " + pubKeyR);
-      const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
-      //console.log("decryptedMessage : " + decryptedMessage);
-      const newMessage = {
-        ...messagesReceived[i],
-        message: decryptedMessage,
-      };
-      DecryptedMessagesReceived.push(newMessage);
-    }
 
-    for (let i = 0; i < messagesSent.length; i++){
-      const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
-      //console.log("get pubKeyS : " + pubKeyS);
-      const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
-     // console.log("decryptedMessage : " + decryptedMessage);
-      const newMessage = {
-        ...messagesSent[i],
-        message: decryptedMessage,
-      };
-      //console.log(newMessage);
-      DecryptedMessagesSent.push(newMessage);
+    for (let i = 0; i < messagesReceived.length; i++) {
+      if (messagesReceived[i].timestamp <= Math.floor(Date.now() / 1000)) {
+        const pubKeyR = await getRecieverPubKey(messagesReceived[i].sender);
+        const decryptedMessage = decryptMessage(messagesReceived[i].message, pubKeyR, MyPriKey);
+        const newMessage = {
+          ...messagesReceived[i],
+          message: decryptedMessage,
+        };
+        DecryptedMessagesReceived.push(newMessage);
+      }
     }
+    
+
+    for (let i = 0; i < messagesSent.length; i++) {
+  if (messagesSent[i].timestamp <= Math.floor(Date.now() / 1000)) {
+    const pubKeyS = await getRecieverPubKey(messagesSent[i].receiver);
+    const decryptedMessage = decryptMessage(messagesSent[i].message, pubKeyS, MyPriKey);
+    const newMessage = {
+      ...messagesSent[i],
+      message: decryptedMessage,
+    };
+    DecryptedMessagesSent.push(newMessage);
+  }
+}
+
     
     const keepUniqueMessages = (messages) => {
       const uniqueMessages = [];
@@ -242,25 +448,39 @@ console.log(allMessages);
         })));
       }
     });
+
+    shareList.forEach(share => {
+      if (!(share.sender in senderShares)) {
+        getEmail(share.sender).then(email => setSenderShares(prevState => ({
+          ...prevState,
+          [share.sender]: email
+        })));
+      }
+      if (!(share.receiver in receiverShares)) {
+        getEmail(share.receiver).then(email => setReceiverShares(prevState => ({
+          ...prevState,
+          [share.receiver]: email
+        })));
+      }
+    });
   }
 
-  shareList.forEach(share => {
-    if (!(share.sender in senderShares)) {
-      getEmail(share.sender).then(email => setSenderShares(prevState => ({
-        ...prevState,
-        [share.sender]: email
-      })));
+  useEffect(() => {
+    // Fetch messages based on the selectedButton
+    fetchMessages(selectedButton);
+  }, [selectedButton]);
+
+  const fetchMessages = (buttonTitle) => {
+    if (buttonTitle === 'Inbox') {
+      getInboxMessages();
+    } else if (buttonTitle === 'Sent') {
+      getSentMessages();
+    } else if (buttonTitle === 'Programmed') {
+      getProgrammedMessages();
+    } else if (buttonTitle === 'Drafts') {
+     getDraftsMessages();
     }
-    if (!(share.receiver in receiverShares)) {
-      getEmail(share.receiver).then(email => setReceiverShares(prevState => ({
-        ...prevState,
-        [share.receiver]: email
-      })));
-    }
-  });
-
-
-
+  }
    
   function formatTimestamp(timestamp) {
     const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
@@ -279,7 +499,7 @@ console.log(allMessages);
   }
 
   useEffect(() => {
-    getName();
+    //getName();
 
     // Lock horizontal scroll
     document.body.style.overflowX = 'hidden';
@@ -316,7 +536,7 @@ console.log(allMessages);
               style={{ backgroundColor: 'white', color: 'gray', borderRadius: '30px', border: '2px solid gray', margin: '0 1rem', fontSize:'1.1em'}} 
               onMouseEnter={(e) => (e.target.style.backgroundColor = "gray", e.target.style.color = "white")}
               onMouseLeave={(e) => (e.target.style.backgroundColor = "white", e.target.style.color = "gray")}
-              onClick={backToMessages}>         
+              onClick={handleToggleReplyMessage}>         
               <BsReplyFill  className="w-10 h-10 mr-2"/>Reply
               </button>
               <button 
@@ -371,116 +591,114 @@ console.log(allMessages);
                 </div>
               </li>
               {messages.map((message, index) => (
-                  <li
-                    key={index}
-                    onMouseEnter={() => setHoverIndex(index)}
-                    onMouseLeave={() => setHoverIndex(null)}
-                    style={{
-                      borderBottom: "1px solid #ccc",
-                      width: "100%",
-                      padding: "15px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      backgroundColor: message.read ? "white" : "ghostwhite",
-                    }}
-                  
-                  >
-                    <div>
-                      <div className="row" >
-                        <div className="col-md-12">
-                          <strong>From :</strong> {senderEmails[message.sender]}
-                          <br/>
-                          <strong>To: </strong>
-                            {message.receiversGroup === "" ? receiverEmails[message.receiver] : message.receiversGroup}
+                <li
+  key={index}
+  onMouseEnter={() => setHoverIndex(index)}
+  onMouseLeave={() => setHoverIndex(null)}
+  style={{
+    borderBottom: "1px solid #ccc",
+    width: "100%",
+    padding: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: message.read ? "white" : "ghostwhite",
+    cursor: 'pointer'
+  }}
+  onClick={() => handleSelectedMessage(message)}
+>
+  <div>
+    <div className="row">
+      <div className="col-md-12">
+        <strong>From :</strong> {senderEmails[message.sender]}
+        <br />
+        <strong>To: </strong>
+        {message.receiversGroup === "" ? receiverEmails[message.receiver] : message.receiversGroup}
+      </div>
+      <div className="col-md-12">
+        <strong>{message.subject}</strong>
+        <br />
+        <strong>Message : </strong>
+        {message.message.length > 100 ? `${message.message.substring(0, 100)}...` : message.message}
+        <br />
+      </div>
+    </div>
 
-                        </div>
-                        <div className="col-md-12">
-                        <strong>{message.subject}</strong>
-                        <br/>
-                          <strong>Message : </strong>
-                          {message.message.length > 100
-                            ? `${message.message.substring(0, 100)}...`
-                            : message.message}
-                            <br/>
-                      </div>
-                      
-                      <div className="col-md-12">
-                        <button onClick={() => handleShare(message)}>partage</button>
-                        {showShares && (
-                          <div>
-                        {shareList.length > 0 &&
-                          <div className="popup">
-                            <div className="share-content">
-                            <span className="close" onClick={() => setShowShares(false)}>&times;</span>
-                              <h2>Shared with :</h2>
-                            <ul >
-                              {shareList.map((share, index) =>
-                                <li key={index}  style={{width: '200%'}}><strong>{senderShares[share.sender]}</strong> shared with <strong>{receiverShares[share.receiver]} </strong> at <strong>{formatTimestamp(share.timestamp.toNumber())}</strong></li>
-                              )}
-                            </ul>
-                          </div>
-                          </div>
-                        }
-                        </div>)}
-                      </div>
-                      <div className="col-md-12">
-                        <button onClick={() => handleView(message)} style={{zIndex:"50"}}>vu</button>
-                        {showViewedbyModal && (
-                          <div className="popup">
-                            <div className="view-content">
-                              <span className="close" onClick={() => setShowViewedbyModal(false)}>&times;</span>
-                              <h2>Viewed By:</h2>
-                              <ul>
-                                {viewedbyList.map((viewer, index) => (
-                                  <li key={index}>{viewer}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+    <div className="buttons-container" style={{marginLeft: -12}}>
+      <button className="btn btn-outline-info" onClick={() => handleShare(message)}>Shares</button>
+      {showShares && (
+        <div className="popup">
+          {shareList.length > 0 && (
+            <div className="share-content">
+              <span className="close" onClick={() => setShowShares(false)}>&times;</span>
+              <h2>Shared with:</h2>
+              <ul className="list-group">
+                {shareList.map((share, index) => (
+                  <li key={index} className="list-group-item">
+                    <strong>{senderShares[share.sender]}</strong> shared with <strong>{receiverShares[share.receiver]}</strong> at <strong>{formatTimestamp(share.timestamp.toNumber())}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
-                    {hoverIndex === index ? (
-                      <>
-                      <button
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            marginRight: "10px",
-                          }}
-                        >
-                          <img src="./reply.png" width={20} height={20} onClick={()=>handleShareMessage(message)}/>
-                        </button>
-                        <button
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                            marginRight: "10px",
-                          }}
-                        >
-                          <img src="./reply2.png" width={20} height={20} />
-                        </button>
-                        <button
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <img src="./delete.png" onClick={() => handleDeleteMessage(message)} width={20} height={20} />
-                        </button>
-                      </>
-                    ) : (
-                      <p className="d-flex justify-content-center" style={{float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1}}>{formatTimestamp(message.timestamp.toNumber())}</p>
-                    )}
-                  </div>
-                </li>
+      <button className="btn btn-outline-info" onClick={() => handleView(message)}>Views</button>
+      {showViewedbyModal && (
+        <div className="popup">
+          <div className="view-content">
+            <span className="close" onClick={() => setShowViewedbyModal(false)}>&times;</span>
+            <h2>Viewed By:</h2>
+            <ul className="list-group">
+              {viewedbyList.map((viewer, index) => (
+                <li key={index} className="list-group-item">{viewer}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+  <div style={{ display: "flex", alignItems: "center", minWidth: '80px' }}>
+    {hoverIndex === index ? (
+      <>
+        <button
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            marginRight: "10px",
+          }}
+        >
+          <img src="./reply.png" width={20} height={20} onClick={() => handleShareMessage(message)} />
+        </button>
+        <button
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            marginRight: "10px",
+          }}
+        >
+          <img src="./reply2.png" width={20} height={20} />
+        </button>
+        <button
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <img src="./delete.png" onClick={() => handleDeleteMessage(message)} width={20} height={20} />
+        </button>
+      </>
+    ) : (
+      <p className="d-flex justify-content-center" style={{ float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>{formatTimestamp(message.timestamp.toNumber())}</p>
+    )}
+  </div>
+</li>
+
               ))}
             </ul>
           </div>
@@ -492,7 +710,9 @@ console.log(allMessages);
       </div>
 
 ) }
-  
+<div className="col-md-12">
+              {showReplyMessage && <ReplyMessage selectedMessage={selectedMessage} />}
+            </div>
   </div>
    
   );

@@ -44,8 +44,9 @@ const Admin = () => {
 
 
   const handleCreateUser = () => {
-    window.location.href = "/name";
+    window.open("/name", "_blank");
   };
+  
 
   async function handleClick(title) {
     if (title === "Users Accounts") {

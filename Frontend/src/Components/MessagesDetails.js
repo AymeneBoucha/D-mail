@@ -4,6 +4,9 @@ import {contractAddressStructures, contractAddressChat} from "../App"
 import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
 import { ethers } from 'ethers';
+import { ec } from 'elliptic';
+import crypto from 'crypto-browserify';
+const curve = new ec('secp256k1');
 
 
 const MessageDetails = (selectedMessage) => {
@@ -17,12 +20,40 @@ const MessageDetails = (selectedMessage) => {
   const [fileUrl, setFileUrl] = useState(null);
   const [counter, setCounter]= useState(0);
   const [senderEmail, setSenderEmail]= useState(0);
+  const [rep, setRep] = useState(false);
+  const [replies, setReplies] = useState([]);
   
   var res=null;
   var loaded=false;
 
   const msg = selectedMessage;
   const msgC = msg.selectedMessage;
+
+  async function getRecieverPubKey(address) {
+    const pubKeyX = await userContract.getRecieverPubKey(address);
+   // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
+    //const pubKey = bytes32PubKeyInverse.toString('hex');
+    const pubKey = pubKeyX.slice(2);
+    return pubKey;
+   }
+
+   async function getSenderPriKey(address){
+    const email = await userContract.getEmail(address);
+    const priKey = sessionStorage.getItem('PrivateKey.'+email);
+    return priKey;
+   }
+
+  function decryptMessage(ciphertextt, pubKey, priKey) {
+    const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
+    const ciphertext = Buffer.from(ciphertextt, 'base64');
+    const iv = ciphertext.slice(0, 16);
+    const encryptedMessage = ciphertext.slice(16);
+    const encryptionKey = sharedSecret.toString('hex').substr(0, 32);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', encryptionKey, iv);
+    const decryptedMessage = Buffer.concat([decipher.update(encryptedMessage), decipher.final()]);
+    const final = decryptedMessage.toString('utf8');
+    return final;
+  };
 
 async function getSenderEmail(){
   const result = await userContract.getEmail(msgC.sender);
@@ -64,66 +95,86 @@ function formatTimestamp(timestamp) {
     return `data:image/jpeg;base64,${base64Image}`;
   }
 
+async function DecryptedReplies(replies){
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  var pubKey = '';
+  if(accounts[0] == msgC.sender){
+     pubKey = await getRecieverPubKey(msgC.receiver);
+  }else{
+     pubKey = await getRecieverPubKey(msgC.sender);
+  }
+   const priKey = await getSenderPriKey(accounts[0]);
+   const decryptedReplies = []
+   for (let i = 0; i < replies.length; i++) {
+    const decrypted = decryptMessage(replies[i], pubKey, priKey)
+    decryptedReplies.push(decrypted);
+   }
+   return decryptedReplies;
+}
   
-  useEffect(() => {
+ useEffect(() => {
     getSenderEmail();
-    if(loaded==false){
-        getFileFromIPFS();
+
+    getFileFromIPFS();
+
+    
+
+    async function getReplies() {
+      const replies = await chatContract.getReplies(msgC.id);
+      const encryptedMessages = replies.responses.map((message) => message.message);
+      const senders = replies.responses.map((message) => message.sender);
+      const receivers = replies.responses.map((message) => message.receiver);
+      var sendersEmails = [];
+      var  receiversEmails = [];
+      for (let i = 0 ; i < senders.length ; i++){
+        const senderEmail = await userContract.getEmail(senders[i]);
+        const receiverEmail = await userContract.getEmail(receivers[i]);
+        sendersEmails.push(senderEmail);
+        receiversEmails.push(receiverEmail);
+      }
+      const timestamps = replies.responses.map((message) => formatTimestamp(message.timestamp.toNumber()));
+  
+      const decryptedReplies = await DecryptedReplies(encryptedMessages);
+      const repliesArray = decryptedReplies.map((message, index) => {
+        return {
+          message: message,
+          sender: sendersEmails[index],
+          receiver: receiversEmails[index],
+          timestamp: timestamps[index],
+        };
+      });
+  
+      setReplies(repliesArray);
     }
-    loaded=true;
-    console.log('Component mounted!');
+  
+    getReplies();
   }, []);
 
-   const getFileFromIPFS = async () => {
+  const getFileFromIPFS = async (hash) => {
     try {
-      console.log("before axios");
-      const res = await axios.get('https://gateway.pinata.cloud/ipfs/'+msgC.fileHash, {
-        // headers: {
-        //   'Accept': 'text/plain'
-        // }
-      })
-      //console.log("Correct Header Status:", res.data)
-      console.log("after axios, res is", res);
-
-
-
-      //console.log('File retrieved from IPFS:', res.data);
+      const res = await axios({
+        method: 'get',
+        url: `https://gateway.pinata.cloud/ipfs/`+msgC.fileHash,
+        responseType: 'blob',
+       
+      });
+  
+      console.log('File retrieved from IPFS:', res.data);
   
       // Determine the file type based on the content type header
       const contentType = res.headers['content-type'];
       if (contentType && contentType.startsWith('image/')) {
         // If the file is an image, display it
-        const imageBase64 = res.data;
-        const binaryString = atob(imageBase64);
-        const blob = new Blob([binaryString], { type: 'image/jpeg' });
-        const imgUrl = URL.createObjectURL(blob);
-        console.log("imgUrl is", imgUrl);
+        const imgUrl = URL.createObjectURL(res.data);
         setImageUrl(imgUrl);
         setFileUrl(null);
       } else {
-          //for text files
-          if (contentType && contentType.startsWith('text/')){
-            const blob = new Blob([res.data], { type: 'text/plain' });
-            const fileUrl = URL.createObjectURL(blob);
-            setFileUrl(fileUrl);
-            setImageUrl(null);
-          }
-          else{
-                if (contentType && contentType.startsWith('application/pdf')){
-                  alert("pdf functionality will be added soon");
-                  // const blob = new Blob([res.data], { type: 'application/pdf' });
-                  // const fileUrl = URL.createObjectURL(blob);
-                  // setFileUrl(fileUrl);
-                  // setImageUrl(null);
-                }
-                else{
-                  alert("file type not supported yet");
-                  // // For other file types, display a download link
-                  // const fileUrl = URL.createObjectURL(res.data);
-                  // setFileUrl(fileUrl);
-                  // setImageUrl(null);
-                }
-          }
+        // For other file types, display a download link
+        const fileUrl = URL.createObjectURL(res.data);
+        setFileUrl(fileUrl);
+        setImageUrl(null);
       }
   
     } catch (error) {
@@ -132,24 +183,33 @@ function formatTimestamp(timestamp) {
   };
   
   return (
-    
     <div>
-   
-      <br/>
+      <br />
       <h2>{msgC.subject}</h2>
-      <hr/>
-      <h5><b>From: </b>{senderEmail}</h5>
-      <h5><b>Sent on: </b>{formatTimestamp(msgC.timestamp.toNumber())}</h5>
-      <br/>
-      <p>{msgC.message}</p>
-      <br/>
-      <div>
-            {imageUrl && <img src={imageUrl} alt="Retrieved file" />}
-            {fileUrl && <a href={fileUrl} download = 'DmailDownload.txt'>Download file</a>}
-      </div>
-
+      <hr />
+      {replies.map((msgC, index) => (
+        <div key={index}>
+          <h5>
+            <b>From: </b>
+            {msgC.sender}
+          </h5>
+          <h5>
+            <b>To: </b>
+            {msgC.receiver}
+          </h5>
+          <h5>
+            <b>Sent on: </b>
+            {msgC.timestamp}
+          </h5>
+          <p>{msgC.message}</p>
+          <div>
+            {msgC.imageUrl && <a href={msgC.imageUrl} download><img src={msgC.imageUrl} alt="Retrieved file" /></a>}
+            {msgC.fileUrl && <a href={msgC.fileUrl} download>Download file</a>}
+          </div>
+          <hr/>
+        </div>
+      ))}
     </div>
-    
   );
 };
 
