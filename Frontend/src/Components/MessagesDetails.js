@@ -6,6 +6,8 @@ import StructuresContract from '../Structures.sol/Structures.json';
 import { ethers } from 'ethers';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
+import  "../assets/shareable.css";
+import  "../assets/SharesList.css";
 const curve = new ec('secp256k1');
 
 
@@ -25,6 +27,13 @@ const MessageDetails = (selectedMessage) => {
   const [rep, setRep] = useState(false);
   const [replies, setReplies] = useState([]);
   const [decryptedSubject, setDecryptedSubject] = useState();
+  const [shares, setShares] = useState([]);
+  const [senderShares, setSenderShares] = useState({});
+  const [receiverShares, setReceiverShares] = useState({});
+  const [showViewedbyModal, setShowViewedbyModal] = useState(false);
+  const [showShares, setShowShares] = useState(false);
+  const [shareList, setShareList] = useState([]);
+  const [viewedbyList, setViewedbyList] = useState([]);
   
   var res=null;
   var loaded=false;
@@ -120,12 +129,108 @@ async function DecryptedReplies(replies){
    return decryptedReplies;
 }
   
+async function getRecieversPubKey(addresses) {
+  const ReceiversPubKeys = [];
+  for (let i = 0; i < addresses.length; i++) {
+    const pubKeyX = await userContract.getRecieverPubKey(addresses[i]);
+    const pubKey = pubKeyX.slice(2);
+    ReceiversPubKeys.push(pubKey);
+  }
+  return ReceiversPubKeys;
+}
+
+async function getSenderPriKey(address) {
+  const email = await userContract.getEmail(address);
+  const priKey = sessionStorage.getItem("PrivateKey." + email);
+  return priKey;
+}
+
+function encryptMessage(plaintext, pubKey, priKey) {
+  const sharedSecret = curve
+    .keyFromPrivate(priKey, "hex")
+    .derive(curve.keyFromPublic(pubKey, "hex").getPublic())
+    .toString("hex");
+  console.log(sharedSecret);
+  const message = Buffer.from(plaintext, "utf8");
+  const iv = crypto.randomBytes(16);
+  const encryptionKey = sharedSecret.toString("hex").substr(0, 32);
+  const cipher = crypto.createCipheriv("aes-256-cbc", encryptionKey, iv);
+  const encryptedMessage = Buffer.concat([
+    cipher.update(message),
+    cipher.final(),
+  ]);
+  const ciphertext = Buffer.concat([iv, encryptedMessage]);
+  console.log(
+    "ciphertext.toString('base64') :" + ciphertext.toString("base64")
+  );
+  const hexCipher = ciphertext.toString("base64").toString(16);
+  console.log("hexCipher : " + hexCipher);
+  return hexCipher;
+}
+
+async function setEncryptedMessages(message, pubKeys, priKey) {
+  const encryptedMessages = [];
+  for (let i = 0; i < pubKeys.length; i++) {
+    const encryptedMessage = encryptMessage(message, pubKeys[i], priKey);
+    encryptedMessages.push(encryptedMessage);
+  }
+  return encryptedMessages;
+}
+
+const handleShareMessage = async (message) => {
+  const recipientEmails = prompt(
+    "Please enter the email addresses of the recipients, separated by commas:"
+  );
+  if (!recipientEmails || !/\S+@\S+\.\S+/.test(recipientEmails)) {
+    alert("Please enter valid email addresses.");
+    return;
+  }
+  console.log(`message:`, { message });
+  const newshare = {
+    id: message.id,
+    timestamp: Date.now(),
+    sender: message.receiver,
+    receiver: recipientEmails,
+    read: false,
+  };
+  console.log(`share:`, { newshare });
+
+  setShares([...shares, newshare]);
+  const recipientAddresses = recipientEmails
+    .split(",")
+    .map((email) => userContract.getAddress(email));
+  const pubKeys = await getRecieversPubKey(recipientAddresses);
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  const priKey = await getSenderPriKey(accounts[0]);
+  //console.log("\n\n\n" + body, pubKeys, priKey);
+  const encryptedMessages = await setEncryptedMessages(
+    message.message,
+    pubKeys,
+    priKey
+  );
+  console.log(message.id, encryptedMessages, recipientAddresses);
+  const tx = await chatContract.shareMessage(
+    message.id,
+    encryptedMessages,
+    recipientAddresses,
+    recipientEmails
+  );
+  const recipientNames = recipientEmails.split(",").join(", ");
+  console.log(
+    `Message ${message.id} shared with recipients ${recipientNames}. Transaction hash: ${tx.transactionHash}`
+  );
+  alert(
+    `Message "${message.subject}" shared with recipients ${recipientNames}.`
+  );
+};
+
  useEffect(() => {
     getSenderEmail();
 
     getFileFromIPFS();
 
-    
 
     async function getReplies() {
   const accounts = await window.ethereum.request({
@@ -252,11 +357,100 @@ async function DecryptedReplies(replies){
       console.log('Error retrieving file from IPFS:', error);
     }
   };
-  
+  async function handleShare(message) {
+    const shareList = await chatContract.getShares(message.id);
+    console.log(shareList);
+    setShowShares(true);
+    setShareList(shareList);
+  }
+
+  async function handleView(message) {
+    const viewedby = await chatContract.getViewedBy(message.id);
+    var viewed = [];
+    for (let i = 0 ; i < viewedby.length ; i++){
+      const vu = await userContract.getEmail(viewedby[i]);
+      viewed.push(vu);
+    }
+    console.log(viewed);
+    setShowViewedbyModal(true);
+    setViewedbyList(viewed);
+  }
   return (
     <div>
       <br />
       <h2>{decryptedSubject}</h2>
+      <div className="buttons-container" style={{ marginLeft: -12 }}>
+                              <button className="btn btn-outline-info" onClick={() => handleShare(msgC)}> Shares</button>
+                              {showShares && (
+                                <div className="popup">
+                                  {shareList.length > 0 && (
+                                    <div className="share-content">
+                                      <span
+                                        className="close"
+                                        onClick={() => setShowShares(false)}
+                                      >
+                                        &times;
+                                      </span>
+                                      <h2>Shared with:</h2>
+                                      <ul className="list-group">
+                                        {shareList.map((share, index) => (
+                                          <li
+                                            key={index}
+                                            className="list-group-item"
+                                          >
+                                            <strong>
+                                              {senderShares[share.sender]}
+                                            </strong>{" "}
+                                            shared with{" "}
+                                            <strong>
+                                              {receiverShares[share.receiver]}
+                                            </strong>{" "}
+                                            at{" "}
+                                            <strong>
+                                              {formatTimestamp(
+                                                share.timestamp.toNumber()
+                                              )}
+                                            </strong>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <button
+                                className="btn btn-outline-info"
+                                onClick={() => handleView(msgC)}
+                              >
+                                Views
+                              </button>
+                              {showViewedbyModal && (
+                                <div className="popup">
+                                  <div className="view-content">
+                                    <span
+                                      className="close"
+                                      onClick={() =>
+                                        setShowViewedbyModal(false)
+                                      }
+                                    >
+                                      &times;
+                                    </span>
+                                    <h2>Viewed By:</h2>
+                                    <ul className="list-group">
+                                      {viewedbyList.map((viewer, index) => (
+                                        <li
+                                          key={index}
+                                          className="list-group-item"
+                                        >
+                                          {viewer}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
       <hr />
       {replies.length === 0 ? (
   <div>
@@ -282,6 +476,7 @@ async function DecryptedReplies(replies){
 ) : (
   replies.map((msgC, index) => (
     <div key={index}>
+
       <h5>
         <b>From: </b>
         {msgC.sender}
@@ -300,6 +495,7 @@ async function DecryptedReplies(replies){
             {fileUrl && <a href={fileUrl} download>Download file</a>}
       </div>
       <hr/>
+
     </div>
   ))
 )}

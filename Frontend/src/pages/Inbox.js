@@ -25,6 +25,8 @@ const Inbox = () => {
   const [messages, setMessages] = useState([]);
   const [showSendMessage, setShowSendMessage] = useState(false);
   const [adminVerification, setAdminVerification] = useState(false);
+  const [searchAddress, setSearchAddress] = useState('');
+
 
   const buttons = [
     
@@ -99,7 +101,7 @@ const Inbox = () => {
   return (
     <div className="p-0" style={{fontSize: '1.6rem'}}>
       
-      <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
+      <Navbar  onSearch={setSearchAddress} style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
       <div className="row">
       <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
       <div style={{ backgroundColor: 'white', height: '100%', position: 'fixed', top: 0, left: 0, width: 230, borderRight: '1px solid #ccc', fontSize: '1.3em'}}>
@@ -169,7 +171,7 @@ const Inbox = () => {
         </div>
       </div>
       <div className="col-md-12">
-      <Messages selectedButton={selectedButton} />
+      <Messages selectedButton={selectedButton}  searchAddress={searchAddress}/>
       
     </div>
             <div className="col-md-12">

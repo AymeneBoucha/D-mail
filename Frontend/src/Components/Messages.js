@@ -21,19 +21,14 @@ import {
 import ReplyMessage from "../Components/ReplyMessage";
 const curve = new ec("secp256k1");
 
-const Messages = ({ selectedButton }) => {
+const Messages = ( props ) => {
+  const { selectedButton, searchAddress } = props;
 
   const [messages, setMessages] = useState([]);
   const [Email, setEmail] = useState("");
   const [Name, setName] = useState("");
   const [senderEmails, setSenderEmails] = useState({});
   const [receiverEmails, setReceiverEmails] = useState({});
-  const [senderShares, setSenderShares] = useState({});
-  const [receiverShares, setReceiverShares] = useState({});
-  const [showViewedbyModal, setShowViewedbyModal] = useState(false);
-  const [showShares, setShowShares] = useState(false);
-  const [shareList, setShareList] = useState([]);
-  const [viewedbyList, setViewedbyList] = useState([]);
   const [shares, setShares] = useState([]);
   const [hoverIndex, setHoverIndex] = useState(null);
   const [showMessage, setShowMessage] = useState(false);
@@ -44,6 +39,8 @@ const Messages = ({ selectedButton }) => {
   const [drafts, setDrafts] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState({});
   const [showDraft, setShowDraft] = useState(false);
+  const [share, setShare] = useState({});
+  const [shareable, setShareable] = useState(true);
 
   //var counter=0;
   const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -64,6 +61,8 @@ const Messages = ({ selectedButton }) => {
     signer
   );
 
+  //setMessages(filteredMessages);
+
   const backToMessages = () => {
     console.log("going back");
     setShowMessage(false);
@@ -75,7 +74,9 @@ const Messages = ({ selectedButton }) => {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
+    setShare(message);
     setSelectedMessage(message);
+    setShareable(message.shareable);
     console.log(message.id);
     console.log(accounts[0], message.receiver);
     if (
@@ -86,10 +87,6 @@ const Messages = ({ selectedButton }) => {
     }
   }
 
-  const handleReplyMessage = (message) => {
-    setShowReplyMessage(false);
-    console.log("messages", messages);
-  };
 
   const handleToggleReplyMessage = () => {
     setShowReplyMessage(!showReplyMessage);
@@ -143,7 +140,7 @@ const Messages = ({ selectedButton }) => {
     return encryptedMessages;
   }
 
-  const handleShareMessage = async (message) => {
+  const handleShareMessage = async () => {
     const recipientEmails = prompt(
       "Please enter the email addresses of the recipients, separated by commas:"
     );
@@ -151,11 +148,11 @@ const Messages = ({ selectedButton }) => {
       alert("Please enter valid email addresses.");
       return;
     }
-    console.log(`message:`, { message });
+    console.log(`message:`, { share });
     const newshare = {
-      id: message.id,
+      id: share.id,
       timestamp: Date.now(),
-      sender: message.receiver,
+      sender: share.receiver,
       receiver: recipientEmails,
       read: false,
     };
@@ -172,37 +169,25 @@ const Messages = ({ selectedButton }) => {
     const priKey = await getSenderPriKey(accounts[0]);
     //console.log("\n\n\n" + body, pubKeys, priKey);
     const encryptedMessages = await setEncryptedMessages(
-      message.message,
+      share.message,
       pubKeys,
       priKey
     );
-    console.log(message.id, encryptedMessages, recipientAddresses);
+    console.log(share.id, encryptedMessages, recipientAddresses, recipientEmails);
     const tx = await chatContract.shareMessage(
-      message.id,
+      share.id,
       encryptedMessages,
       recipientAddresses,
       recipientEmails
     );
     const recipientNames = recipientEmails.split(",").join(", ");
     console.log(
-      `Message ${message.id} shared with recipients ${recipientNames}. Transaction hash: ${tx.transactionHash}`
+      `Message ${share.id} shared with recipients ${recipientNames}. Transaction hash: ${tx.transactionHash}`
     );
     alert(
-      `Message "${message.subject}" shared with recipients ${recipientNames}.`
+      `Message "${share.subject}" shared with recipients ${recipientNames}.`
     );
   };
-  async function handleShare(message) {
-    const shareList = await chatContract.getShares(message.id);
-    console.log(shareList);
-    setShowShares(true);
-    setShareList(shareList);
-  }
-
-  async function handleView(message) {
-    const viewedby = await chatContract.getViewedBy(message.id);
-    setShowViewedbyModal(true);
-    setViewedbyList(viewedby);
-  }
 
   async function DeleteMessage(message) {
     const accounts = await window.ethereum.request({
@@ -552,13 +537,26 @@ const Messages = ({ selectedButton }) => {
       }
     });
   }
-
-
-
+ 
   useEffect(() => {
     // Fetch messages based on the selectedButton
-    fetchMessages(selectedButton);
+    if (searchAddress === "") {
+      fetchMessages(selectedButton);
+    }
   }, [selectedButton]);
+  
+  useEffect(() => {
+    // Filter messages based on the searchAddress
+    if (searchAddress !== "") {
+      const filteredMessages = messages.filter((message) => {
+        const sender = senderEmails[message.sender];
+        const receiver = receiverEmails[message.receiver];
+        return sender === searchAddress || receiver === searchAddress;
+      });
+      setMessages(filteredMessages);
+    } 
+  }, [searchAddress, messages]);
+  
 
   const fetchMessages = (buttonTitle) => {
     if (buttonTitle === "Inbox") {
@@ -660,6 +658,8 @@ const Messages = ({ selectedButton }) => {
                 <BsReplyFill className="w-10 h-10 mr-2" />
                 Reply
               </button>
+             { shareable &&
+             <>
               <button
                 className="btn btn-primary btn-orange"
                 style={{
@@ -678,11 +678,13 @@ const Messages = ({ selectedButton }) => {
                   (e.target.style.backgroundColor = "white"),
                   (e.target.style.color = "gray")
                 )}
-                onClick={backToMessages}
+                onClick={() => handleShareMessage()}
               >
                 <BsBoxArrowUpRight className="w-10 h-10 mr-2" />
                 Forward
               </button>
+              </>
+             }
               <button
                 className="btn btn-primary btn-orange"
                 style={{
@@ -812,87 +814,6 @@ const Messages = ({ selectedButton }) => {
                                 <br />
                               </div>
                             </div>
-
-                            <div
-                              className="buttons-container"
-                              style={{ marginLeft: -12 }}
-                            >
-                              <button
-                                className="btn btn-outline-info"
-                                onClick={() => handleShare(message)}
-                              >
-                                Shares
-                              </button>
-                              {showShares && (
-                                <div className="popup">
-                                  {shareList.length > 0 && (
-                                    <div className="share-content">
-                                      <span
-                                        className="close"
-                                        onClick={() => setShowShares(false)}
-                                      >
-                                        &times;
-                                      </span>
-                                      <h2>Shared with:</h2>
-                                      <ul className="list-group">
-                                        {shareList.map((share, index) => (
-                                          <li
-                                            key={index}
-                                            className="list-group-item"
-                                          >
-                                            <strong>
-                                              {senderShares[share.sender]}
-                                            </strong>{" "}
-                                            shared with{" "}
-                                            <strong>
-                                              {receiverShares[share.receiver]}
-                                            </strong>{" "}
-                                            at{" "}
-                                            <strong>
-                                              {formatTimestamp(
-                                                share.timestamp.toNumber()
-                                              )}
-                                            </strong>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              <button
-                                className="btn btn-outline-info"
-                                onClick={() => handleView(message)}
-                              >
-                                Views
-                              </button>
-                              {showViewedbyModal && (
-                                <div className="popup">
-                                  <div className="view-content">
-                                    <span
-                                      className="close"
-                                      onClick={() =>
-                                        setShowViewedbyModal(false)
-                                      }
-                                    >
-                                      &times;
-                                    </span>
-                                    <h2>Viewed By:</h2>
-                                    <ul className="list-group">
-                                      {viewedbyList.map((viewer, index) => (
-                                        <li
-                                          key={index}
-                                          className="list-group-item"
-                                        >
-                                          {viewer}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
                           </div>
                           <div
                             style={{
@@ -1004,23 +925,6 @@ const Messages = ({ selectedButton }) => {
                               </div>
                             </div>
                           </div>
-                          {/* <div style={{ display: "flex", alignItems: "center", minWidth: '80px' }}>
-    {hoverIndex === index ? (
-      <>
-        <button
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          <img src="./delete.png" onClick={() => handleDeleteMessage(message)} width={20} height={20} />
-        </button>
-      </>
-    ) : (
-      <p className="d-flex justify-content-center" style={{ float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>{formatTimestamp(message.timestamp.toNumber())}</p>
-    )}
-  </div> */}
                         </li>
                       );
                     }

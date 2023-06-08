@@ -6,14 +6,15 @@
     top: 0;
     width: 100%;
     height: 100%;
+
   }
   
-  .viewpopup-content {
-    background-color: #fefefe;
+  .view-content {
+    background-color: #d1d1d1;
     margin: 10% auto;
     padding: 20px;
     width: 80%;
-    max-width: 400px;
+    max-width: 1000px
   }
   
   .close {
@@ -26,7 +27,7 @@
   
 
   .share-content {
-    background-color: #fefefe;
+    background-color: #d1d1d1;
     margin: 10% auto;
     padding: 20px;
     width: 80%;

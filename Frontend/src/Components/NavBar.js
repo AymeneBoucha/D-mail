@@ -6,11 +6,11 @@ import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
 import {contractAddressStructures, contractAddressChat} from "../App"
 
-const NavBar = () => {
+const NavBar = ({ onSearch }) => {
 
   const [walletAddress, setWalletAddress] = useState("");
   const [walletAddressName, setWalletAddressName] = useState("");
-
+  const [searchInput, setSearchInput] = useState('');
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
@@ -39,7 +39,10 @@ async function logout() {
     getName();
   }, []);
 
-
+  const handleSearch = () => {
+    onSearch(searchInput);
+    console.log("search:",searchInput)
+  };
 
   return (
     <Navbar style={{ backgroundColor: '#1F2229', zIndex: 10 }} variant="dark" expand="md">
@@ -51,8 +54,8 @@ async function logout() {
 
         <div style={{ float: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
          <Form className="d-flex justify-content-center">
-            <FormControl type="search" placeholder="Search" className="me-2" aria-label="Search" style={{ backgroundColor: 'white', borderRadius: '20px', width: '400px' }} />
-            <Button variant="outline-light" className="px-2" style={{ backgroundColor: '#FB723F',  borderRadius: '50px' }}><Search /></Button>
+         <FormControl type="search" placeholder="Search" className="me-2" aria-label="Search" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} style={{ backgroundColor: 'white', borderRadius: '20px', width: '400px' }} />
+      <Button variant="outline-light" className="px-2" style={{ backgroundColor: '#FB723F',  borderRadius: '50px' }} onClick={handleSearch}><Search /></Button>
           </Form>
                
         </div>

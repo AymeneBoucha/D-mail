@@ -9,6 +9,7 @@ import crypto from 'crypto-browserify';
 import axios from "axios";
 import { BeatLoader } from 'react-spinners';
 import  "../assets/shareable.css";
+import Inbox from '../pages/Inbox';
 const BigNumber = require('bignumber.js');
 
 
@@ -43,6 +44,7 @@ const SendMessage = (selectedDraft) => {
   const [showDatetimeInput, setShowDatetimeInput] = useState(false);
   const [isMessageSent, setIsMessageSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [sendMessageProp, setSendMessageProp] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -375,6 +377,7 @@ if(subjectD !== undefined){
   return (
     <div className="card-body p-0 text-center m-2" style={{/*display: isMessageSent ? "none" : "block",*/ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
   <div className="card-header bg-dark text-white" style={{borderRadius: "8px 8px 0 0", cursor: "pointer"}} onClick={() => setIsMinimized(!isMinimized)}>
+  {sendMessageProp && <Inbox sendMessageProp={sendMessageProp} style={{display: 'none'}}/>}
   <span className="closeMessage" onClick={handleCloseMessage}>&times;</span>
   <h5 className="mt-0">New Message</h5>
 </div>
