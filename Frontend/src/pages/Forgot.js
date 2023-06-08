@@ -84,6 +84,13 @@ function Forgot() {
       console.log("current user is: ", address)
       console.log(bytes32HashPassword);
       const tx = await userContract.changePasswordUser(address, bytes32HashPassword);
+      const email = await userContract.getEmail(accounts[0]);
+      localStorage.removeItem("PrivateKey." + email);
+      const seed = bip39.mnemonicToSeedSync(seedPhrase);
+      const master = sha512.array(seed);
+      const keyPair = curve.keyFromPrivate(master.slice(0, 32));
+      const privateKey = keyPair.getPrivate().toString("hex");
+      localStorage.setItem("PrivateKey." + email, AES.encrypt(privateKey, password).toString());
       console.log(tx.hash);
 
       window.location.href = "/";

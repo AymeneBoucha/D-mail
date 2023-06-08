@@ -26,6 +26,7 @@ function ConnectWallet() {
   const [userId, setUserId] = useState("");
   const [isExecuted, setIsExecuted] = useState(false);
   const [link, setLink] = useState("");
+  const [showModalF, setShowModalF] = useState(false);
 
   const [passwordError, setPasswordError] = useState(null);
   const [emailError, setEmailError] = useState(null);
@@ -53,6 +54,11 @@ function ConnectWallet() {
     });
     setWalletAddress(accounts[0]);
   }
+
+  const handleCloseModalF = () => {
+    setShowModalF(false);
+  };
+
 
   const handleCloseModal = () => {
     setShowModal(false);
@@ -126,6 +132,7 @@ function ConnectWallet() {
     }
     if (err) return;
 
+    try{
     const userExists = await userContract.verifyUser(userId, email);
     console.log(userExists);
     if (userExists == true) {
@@ -157,19 +164,15 @@ function ConnectWallet() {
 
       console.log(bytes32HashSeed + "\n" + bytes32HashPassword + "\n" + pubKey);
 
-      await userContract.createUser(
-        userId,
-        name,
-        email,
-        walletAddress,
-        bytes32HashSeed,
-        bytes32HashPassword,
-        bytes32PubKey
-      );
+      await userContract.createUser(userId, name, email, walletAddress, bytes32HashSeed, bytes32HashPassword, bytes32PubKey);
       setShowModal(true);
+
     } else {
-      alert("You don't have permission to create an account ! ");
+      setShowModalF(true);
     }
+  }catch {
+    setShowModalF(true);
+  }
   }
 
   async function IsConnected(event) {
@@ -188,6 +191,58 @@ function ConnectWallet() {
         margin: "0",
       }}
     >
+    <div>
+              <Modal show={showModal} onHide={handleCloseModal}>
+                <Modal.Header closeButton style={{ backgroundColor: '#ffcccc', borderTopLeftRadius: '10px', borderTopRightRadius: '10px', borderBottom: 'none' }}>
+                  <Modal.Title style={{ fontSize: '24px', color: '#cc0000', fontWeight: 'bold' }}>Your Seed Words</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ backgroundColor: '#ffcccc',  fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '0', borderTopRightRadius: '0' }}>
+                <p style={{textAlign: 'center', marginTop: '15px', fontSize: '20px'}}>Your Seed Words</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    {seedWords.map((word, index) => {
+                      if (index % 4 === 0) {
+                        // start new line after every 4 words
+                        return (
+                          <div key={index} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
+                            <span style={{ margin: '5px', padding: '10px', borderRadius: '5px', border: '2px solid #333', boxShadow: '2px 2px 4px #999', minWidth: '100px', textAlign: 'center', fontSize: '16px' }}>{word}</span>
+                            <span style={{ margin: '5px', padding: '10px', borderRadius: '5px', border: '2px solid #333', boxShadow: '2px 2px 4px #999', minWidth: '100px', textAlign: 'center', fontSize: '16px' }}>{seedWords[index + 1]}</span>
+                            <span style={{ margin: '5px', padding: '10px', borderRadius: '5px', border: '2px solid #333', boxShadow: '2px 2px 4px #999', minWidth: '100px', textAlign: 'center', fontSize: '16px' }}>{seedWords[index + 2]}</span>
+                            <span style={{ margin: '5px', padding: '10px', borderRadius: '5px', border: '2px solid #333', boxShadow: '2px 2px 4px #999', minWidth: '100px', textAlign: 'center', fontSize: '16px' }}>{seedWords[index + 3]}</span>
+                          </div>
+                        );
+                      } else {
+                        return null;
+                      }
+                    })}
+                  </div>
+                  <div style={{ marginTop: '20px' }}>
+                    <p style={{ fontSize: '15px',  color: '#cc0000' }}>IMPORTANT: Please write down and keep these words in a safe and secure place. These words are the only way to recover your account in case of loss or theft of your device or password.</p>
+                  </div>
+                </Modal.Body>
+                <Modal.Footer style={{ backgroundColor: '#ffcccc', borderTop: 'none', borderBottomLeftRadius: '5px', borderBottomRightRadius: '5px' }}>
+                  <Button variant="secondary" onClick={handleCloseModal}>
+                    Close
+                  </Button>
+                </Modal.Footer>
+              </Modal>
+                  </div>
+                  <div>
+                        <Modal show={showModalF} onHide={handleCloseModalF}>
+                          <Modal.Body style={{fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '0', borderTopRightRadius: '0', backgroundColor: '#FFCCCC' }}>
+                            <h1 style={{ textAlign: 'center', marginTop: '15px', fontSize: '24px', fontWeight: 'bold'}}>Account creation error</h1>
+                      
+                            <div style={{ marginTop: '20px' }}>
+                              <p style={{ fontSize: '15px'}}>There was an error when creating the account, check if you have the required permissions.</p>
+                            </div>
+                          </Modal.Body>
+                          <Modal.Footer style={{borderTop: 'none', borderBottomLeftRadius: '5px', borderBottomRightRadius: '5px', backgroundColor: '#FFCCCC' }}>
+                            <Button variant="secondary" onClick={handleCloseModalF} style={{backgroundColor: 'darkred'}}>
+                              Close
+                            </Button>
+                          </Modal.Footer>
+                        </Modal>
+              </div>
+
       <div className="container py-5 h-100">
         <div className="row d-flex justify-content-center align-items-center h-100">
           <div className="col-12 col-md-8 col-lg-6 col-xl-5">
@@ -449,151 +504,6 @@ function ConnectWallet() {
                   >
                     Create Account
                   </button>
-                  <Modal show={showModal} onHide={handleCloseModal}>
-                    <Modal.Header
-                      closeButton
-                      style={{
-                        backgroundColor: "#ffcccc",
-                        borderTopLeftRadius: "10px",
-                        borderTopRightRadius: "10px",
-                        borderBottom: "none",
-                      }}
-                    >
-                      <Modal.Title
-                        style={{
-                          fontSize: "24px",
-                          color: "#cc0000",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Your Seed Words
-                      </Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body
-                      style={{
-                        backgroundColor: "#ffcccc",
-                        fontWeight: "bold",
-                        fontSize: "18px",
-                        padding: "20px",
-                        borderTopLeftRadius: "0",
-                        borderTopRightRadius: "0",
-                      }}
-                    >
-                      <p
-                        style={{
-                          textAlign: "center",
-                          marginTop: "15px",
-                          fontSize: "20px",
-                        }}
-                      >
-                        Your Seed Words
-                      </p>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                        }}
-                      >
-                        {seedWords.map((word, index) => {
-                          if (index % 4 === 0) {
-                            // start new line after every 4 words
-                            return (
-                              <div
-                                key={index}
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  justifyContent: "center",
-                                  width: "100%",
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    margin: "5px",
-                                    padding: "10px",
-                                    borderRadius: "5px",
-                                    border: "2px solid #333",
-                                    boxShadow: "2px 2px 4px #999",
-                                    minWidth: "100px",
-                                    textAlign: "center",
-                                    fontSize: "16px",
-                                  }}
-                                >
-                                  {word}
-                                </span>
-                                <span
-                                  style={{
-                                    margin: "5px",
-                                    padding: "10px",
-                                    borderRadius: "5px",
-                                    border: "2px solid #333",
-                                    boxShadow: "2px 2px 4px #999",
-                                    minWidth: "100px",
-                                    textAlign: "center",
-                                    fontSize: "16px",
-                                  }}
-                                >
-                                  {seedWords[index + 1]}
-                                </span>
-                                <span
-                                  style={{
-                                    margin: "5px",
-                                    padding: "10px",
-                                    borderRadius: "5px",
-                                    border: "2px solid #333",
-                                    boxShadow: "2px 2px 4px #999",
-                                    minWidth: "100px",
-                                    textAlign: "center",
-                                    fontSize: "16px",
-                                  }}
-                                >
-                                  {seedWords[index + 2]}
-                                </span>
-                                <span
-                                  style={{
-                                    margin: "5px",
-                                    padding: "10px",
-                                    borderRadius: "5px",
-                                    border: "2px solid #333",
-                                    boxShadow: "2px 2px 4px #999",
-                                    minWidth: "100px",
-                                    textAlign: "center",
-                                    fontSize: "16px",
-                                  }}
-                                >
-                                  {seedWords[index + 3]}
-                                </span>
-                              </div>
-                            );
-                          } else {
-                            return null;
-                          }
-                        })}
-                      </div>
-                      <div style={{ marginTop: "20px" }}>
-                        <p style={{ fontSize: "15px", color: "#cc0000" }}>
-                          IMPORTANT: Please write down and keep these words in a
-                          safe and secure place. These words are the only way to
-                          recover your account in case of loss or theft of your
-                          device or password.
-                        </p>
-                      </div>
-                    </Modal.Body>
-                    <Modal.Footer
-                      style={{
-                        backgroundColor: "#ffcccc",
-                        borderTop: "none",
-                        borderBottomLeftRadius: "5px",
-                        borderBottomRightRadius: "5px",
-                      }}
-                    >
-                      <Button variant="secondary" onClick={handleCloseModal}>
-                        Close
-                      </Button>
-                    </Modal.Footer>
-                  </Modal>
-
                   {isExecuted && (
                     <a
                       href={link}

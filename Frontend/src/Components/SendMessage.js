@@ -45,6 +45,7 @@ const SendMessage = (selectedDraft) => {
   const [isMessageSent, setIsMessageSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sendMessageProp, setSendMessageProp] = useState(false);
+  const [showRemoveFile, setShowRemoveFile] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -56,6 +57,16 @@ const SendMessage = (selectedDraft) => {
     setShowCCI(!showCCI);
   };
   
+  const handleAddFile = (e) => {
+    setFileImg(e.target.files[0]);
+    setShowRemoveFile(true);
+  };
+
+  const handleRemoveFile = () => {
+    setFileImg(null);
+    setShowRemoveFile(false);
+  };
+
   function encryptMessage(plaintext, pubKey, priKey) {
      const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
      console.log(sharedSecret);
@@ -486,7 +497,7 @@ if(subjectD !== undefined){
 
         <div className="form-group d-flex justify-content-between align-items-center">
         <div className="btn-group d-flex align-items-center">
-          <label htmlFor="upload-button" className="btn btn-secondary btn-sm rounded-end flex-grow-1" style={{
+        <label htmlFor="upload-button" className="btn btn-secondary btn-sm rounded-end flex-grow-1" style={{
                 backgroundColor: "#FB723F",
                 marginLeft: "1.4px",
                 border: "none",
@@ -494,9 +505,16 @@ if(subjectD !== undefined){
                 borderRadius: "8px 8px 8px 8px",
                 transition: "all 0.3s ease",
               }}>
-                <input id="upload-button" type="file" onChange={(e) =>setFileImg(e.target.files[0])} style={{display: 'none'}} />
+                <input id="upload-button" type="file" onChange={(e) =>handleAddFile(e)} style={{display: 'none'}} />
                 <img src="add_file.png" alt="send" style={{ pointerEvents: "none", maxWidth: "80%" }} />
           </label>
+
+          {showRemoveFile ? (
+          <div>
+                <a href="#" onClick={handleRemoveFile} style={{ fontSize: "14px", color: "#707070", textDecoration: "underline", marginLeft: '10px'}}>
+                          Remove file
+                </a>
+          </div> ) : (<div></div>)}
           
         </div>
           <div className="btn-group d-flex align-items-center">

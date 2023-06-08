@@ -5,7 +5,8 @@ import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
 import {contractAddressStructures, contractAddressChat} from "../App"
 import { isEmail } from 'email-validator';
-import Modal from 'react-modal';
+//import Modal from 'react-modal';
+import { Modal, Button } from "react-bootstrap";
 
 function NameForum() {
 
@@ -18,6 +19,8 @@ function NameForum() {
 
   const [emailError, setEmailError] = useState(null);
   const [idError, setIdError] = useState(null);
+  const [showModalT, setShowModalT] = useState(false);
+  const [showModalF, setShowModalF] = useState(false);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -39,9 +42,18 @@ const closeSuccessModal = () => {
   setIsSuccessModalOpen(false);
 };
 
+const handleCloseModalT = () => {
+  setShowModalT(false);
+  //window.location.href = "/";
+};
+
+const handleCloseModalF = () => {
+  setShowModalF(false);
+};
+
 useEffect(() => {
   // Set app element when component mounts
-  Modal.setAppElement('#root');
+
 }, []);
 
   async function createUserId() {
@@ -62,13 +74,13 @@ useEffect(() => {
       } else {
         setIdError(null);
       }
-      if (err) return;
-    await userContract.createUserId(email, userId);
-    openSuccessModal();
-    window.location.href = "/create";
+      if(err) return;
+        await userContract.createUserId(email, userId);
+        setShowModalT(true);
+        //window.location.href = "/create";
     }
     catch(e) {
-      alert("Invalid Email or ID !");
+      setShowModalF(true);
     }
   }
  
@@ -82,6 +94,43 @@ useEffect(() => {
 
   return (
     <section className="vh-100" style={{overflowX: "hidden", backgroundImage: "url('/Background.png')", backgroundRepeat: 'no-repeat', backgroundSize: 'cover', backgroundPosition: 'center center', margin: '0', height: '100vh' }}>
+    <div>
+      <Modal show={showModalT} onHide={handleCloseModalT}>
+      <Modal.Header style={{ borderTopLeftRadius: '20px', borderTopRightRadius: '20px', backgroundColor: '#F0FFF0' }}>
+      </Modal.Header>
+        <Modal.Body style={{fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '5px', borderTopRightRadius: '5px', backgroundColor: '#F0FFF0' }}>
+          <h1 style={{ textAlign: 'center', marginTop: '15px', fontSize: '24px', fontWeight: 'bold'}}>User ID created</h1>
+    
+          <div style={{ marginTop: '20px' }}>
+            <p style={{ fontSize: '15px'}}>User ID created, you can now ask the user to create their account.</p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer style={{borderTop: 'none', borderBottomLeftRadius: '5px', borderBottomRightRadius: '5px', backgroundColor: '#F0FFF0' }}>
+          <Button variant="secondary" style={{backgroundColor: 'darkgreen'}}onClick={handleCloseModalT}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      </div>
+
+      <div>
+      <Modal show={showModalF} onHide={handleCloseModalF}>
+      <Modal.Header style={{ borderTopLeftRadius: '20px', borderTopRightRadius: '20px', backgroundColor: '#FFCCCC' }}>
+      </Modal.Header>
+        <Modal.Body style={{fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '5px', borderTopRightRadius: '5px', backgroundColor: '#FFCCCC' }}>
+          <h1 style={{ textAlign: 'center', marginTop: '15px', fontSize: '24px', fontWeight: 'bold'}}>User ID creation failed</h1>
+    
+          <div style={{ marginTop: '20px' }}>
+            <p style={{ fontSize: '15px'}}>User ID not created, please make sure that you are using the admin wallet, and that the ID is a correct hash.</p>
+          </div>
+        </Modal.Body>
+        <Modal.Footer style={{borderTop: 'none', borderBottomLeftRadius: '5px', borderBottomRightRadius: '5px', backgroundColor: '#FFCCCC' }}>
+          <Button variant="secondary" style={{backgroundColor: 'darkred'}}onClick={handleCloseModalF}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      </div>
   <div className="container py-5 h-100">
     <div className="row d-flex justify-content-center align-items-center h-100">
       <div className="col-12 col-md-8 col-lg-6 col-xl-5">
@@ -164,20 +213,6 @@ useEffect(() => {
           </div>
         </div>
       </div>
-      <Modal
-        isOpen={isSuccessModalOpen}
-        onRequestClose={closeSuccessModal}
-        className="modal"
-        overlayClassName="overlay"
-      >
-        <div className="success-popup">
-          <h3>User Created Successfully!</h3>
-          <p>Thank you for creating a new user.</p>
-          <button className="close-button" onClick={closeSuccessModal}>
-            Close
-          </button>
-        </div>
-      </Modal>
     </section>
   );
 }

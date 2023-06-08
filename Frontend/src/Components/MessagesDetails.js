@@ -34,6 +34,7 @@ const MessageDetails = (selectedMessage) => {
   const [showShares, setShowShares] = useState(false);
   const [shareList, setShareList] = useState([]);
   const [viewedbyList, setViewedbyList] = useState([]);
+  const [buttons, setButtons] = useState(true);
   
   var res=null;
   var loaded=false;
@@ -69,21 +70,27 @@ const MessageDetails = (selectedMessage) => {
   };
 
 async function getSenderEmail(){
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  if(msgC.receiver.toLowerCase() == accounts[0].toLowerCase()){
+    setButtons(false);
+  }
   const result = await userContract.getEmail(msgC.sender);
   const result1 = await userContract.getEmail(msgC.receiver);
   setSenderEmail(result);
   setReceiverEmail(result1);
-  console.log("sender email is", senderEmail);
+  //console.log("sender email is", senderEmail);
 }
 
 
-  console.log(msgC.message);
+ /* console.log(msgC.message);
  console.log('file hash from smart contract'+ msgC.fileHash);
- console.log('file timestamp is '+ msgC.timestamp);
+ console.log('file timestamp is '+ msgC.timestamp);*/
 
  useEffect( () => {
   if (counter == 1){
-    console.log("Result changed", res);
+   // console.log("Result changed", res);
   };
   if (counter == 0)
   {
@@ -185,7 +192,7 @@ const handleShareMessage = async (message) => {
     alert("Please enter valid email addresses.");
     return;
   }
-  console.log(`message:`, { message });
+  //console.log(`message:`, { message });
   const newshare = {
     id: message.id,
     timestamp: Date.now(),
@@ -193,7 +200,7 @@ const handleShareMessage = async (message) => {
     receiver: recipientEmails,
     read: false,
   };
-  console.log(`share:`, { newshare });
+  //console.log(`share:`, { newshare });
 
   setShares([...shares, newshare]);
   const recipientAddresses = recipientEmails
@@ -227,6 +234,7 @@ const handleShareMessage = async (message) => {
 };
 
  useEffect(() => {
+  
     getSenderEmail();
 
     getFileFromIPFS();
@@ -236,6 +244,7 @@ const handleShareMessage = async (message) => {
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
   });
+
   var pubKey = '';
   if(accounts[0].toLowerCase() == msgC.sender.toLowerCase()){
      pubKey = await getRecieverPubKey(msgC.receiver);
@@ -304,11 +313,12 @@ const handleShareMessage = async (message) => {
       });
   
       setReplies(repliesArray);
-      console.log(replies);
+      
     }
   
     getReplies();
-    console.log(replies);
+    
+
   }, []);
 
   const getFileFromIPFS = async (hash) => {
@@ -379,78 +389,57 @@ const handleShareMessage = async (message) => {
     <div>
       <br />
       <h2>{decryptedSubject}</h2>
+    
       <div className="buttons-container" style={{ marginLeft: -12 }}>
-                              <button className="btn btn-outline-info" onClick={() => handleShare(msgC)}> Shares</button>
-                              {showShares && (
-                                <div className="popup">
-                                  {shareList.length > 0 && (
-                                    <div className="share-content">
-                                      <span
-                                        className="close"
-                                        onClick={() => setShowShares(false)}
-                                      >
-                                        &times;
-                                      </span>
-                                      <h2>Shared with:</h2>
-                                      <ul className="list-group">
-                                        {shareList.map((share, index) => (
-                                          <li
-                                            key={index}
-                                            className="list-group-item"
-                                          >
-                                            <strong>
-                                              {senderShares[share.sender]}
-                                            </strong>{" "}
-                                            shared with{" "}
-                                            <strong>
-                                              {receiverShares[share.receiver]}
-                                            </strong>{" "}
-                                            at{" "}
-                                            <strong>
-                                              {formatTimestamp(
-                                                share.timestamp.toNumber()
-                                              )}
-                                            </strong>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
+  {buttons && (
+    <>
+      <button className="btn btn-outline-info" onClick={() => handleShare(msgC)}>Shares</button>
+      {showShares && (
+        <div className="popup">
+          {shareList.length > 0 && (
+            <div className="share-content">
+              <span className="close" onClick={() => setShowShares(false)}>
+                &times;
+              </span>
+              <h2>Shared with:</h2>
+              <ul className="list-group">
+                {shareList.map((share, index) => (
+                  <li key={index} className="list-group-item">
+                    <strong>{senderShares[share.sender]}</strong> shared with{" "}
+                    <strong>{receiverShares[share.receiver]}</strong> at{" "}
+                    <strong>
+                      {formatTimestamp(share.timestamp.toNumber())}
+                    </strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
-                              <button
-                                className="btn btn-outline-info"
-                                onClick={() => handleView(msgC)}
-                              >
-                                Views
-                              </button>
-                              {showViewedbyModal && (
-                                <div className="popup">
-                                  <div className="view-content">
-                                    <span
-                                      className="close"
-                                      onClick={() =>
-                                        setShowViewedbyModal(false)
-                                      }
-                                    >
-                                      &times;
-                                    </span>
-                                    <h2>Viewed By:</h2>
-                                    <ul className="list-group">
-                                      {viewedbyList.map((viewer, index) => (
-                                        <li
-                                          key={index}
-                                          className="list-group-item"
-                                        >
-                                          {viewer}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+      <button className="btn btn-outline-info" onClick={() => handleView(msgC)}>Views</button>
+      {showViewedbyModal && (
+        <div className="popup">
+          <div className="view-content">
+            <span className="close" onClick={() => setShowViewedbyModal(false)}>
+              &times;
+            </span>
+            <h2>Viewed By:</h2>
+            <ul className="list-group">
+              {viewedbyList.map((viewer, index) => (
+                <li key={index} className="list-group-item">
+                  {viewer}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
+  )}
+</div>
+
       <hr />
       {replies.length === 0 ? (
   <div>

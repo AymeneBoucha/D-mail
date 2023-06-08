@@ -131,7 +131,7 @@ contract Structures {
         bytes32 password,
         bytes memory pubKey
     ) public {
-        require(bytes(name).length > 0, "You have to specify your name !");
+        require(bytes(name).length > 0, "You have to specify your name !");  
         User memory user = User(name, email, true, walletAddress, true);
         Secure memory secure = Secure(seed, password, pubKey);
         users[walletAddress] = user;

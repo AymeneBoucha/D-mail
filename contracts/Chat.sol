@@ -198,7 +198,7 @@ function addReply(uint256 messageId, string memory response, Message memory mess
 
         }      
 
-         function shareMessage(uint256 messageId, string[] memory encryptedMessages, address[] calldata receivers, string memory emailGroup) external {
+         function shareMessage(uint256 messageId, string[] memory encryptedSubjects, string[] memory encryptedMessages, string[] memory encryptedHashes, address[] calldata receivers, string memory emailGroup) external {
     require(messageId < messages.length, "Invalid message ID");
     require(structures.checkUserExists(msg.sender) == true, "You must have an account");
     Message storage messageToShare = messages[messageId];
@@ -215,14 +215,14 @@ function addReply(uint256 messageId, string memory response, Message memory mess
             messageCount,
             msg.sender,
             receivers[i],
-            messageToShare.subject,
+            encryptedSubjects[i],
             encryptedMessages[i],
             block.timestamp,
             false,
             true,
             new address[](0),
             messages[messageId].originalMessageId,
-            messageToShare.fileHash,
+            encryptedHashes[i],
             emailGroup,
             DeletionStatus.NotDeleted
         );

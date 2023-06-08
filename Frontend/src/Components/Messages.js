@@ -168,15 +168,28 @@ const Messages = ( props ) => {
     });
     const priKey = await getSenderPriKey(accounts[0]);
     //console.log("\n\n\n" + body, pubKeys, priKey);
+    console.log(share.message, pubKeys, priKey);
     const encryptedMessages = await setEncryptedMessages(
       share.message,
+      pubKeys,
+      priKey
+    );
+    const encryptedSubjects =  await setEncryptedMessages(
+      share.subject,
+      pubKeys,
+      priKey
+    );
+    const encryptedFilesHashes =  await setEncryptedMessages(
+      share.fileHash,
       pubKeys,
       priKey
     );
     console.log(share.id, encryptedMessages, recipientAddresses, recipientEmails);
     const tx = await chatContract.shareMessage(
       share.id,
+      encryptedSubjects,
       encryptedMessages,
+      encryptedFilesHashes,
       recipientAddresses,
       recipientEmails
     );
@@ -273,7 +286,6 @@ const Messages = ( props ) => {
         );
         
         const decryptedSubject = decryptMessage(messagesReceived[i].subject, pubKeyS, MyPriKey);
-        console.log(decryptedSubject);
         const newMessage = {
           ...messagesReceived[i],
           message: decryptedMessage,
@@ -343,6 +355,7 @@ const Messages = ( props ) => {
     const MyPriKey = await getSenderPriKey(accounts[0]);
 
     const messagesSent = await opContract.MessageSent(result);
+    console.log(messagesSent);
     const DecryptedMessagesSent = [];
 
     for (let i = 0; i < messagesSent.length; i++) {
@@ -360,9 +373,10 @@ const Messages = ( props ) => {
           subject: decryptedSubject
         };
         DecryptedMessagesSent.push(newMessage);
+        console.log(newMessage);
       }
+      
     }
-    
 
     const keepUniqueMessages = (messages) => {
       const uniqueMessages = [];
@@ -383,6 +397,7 @@ const Messages = ( props ) => {
       }
       return uniqueMessages;
     };
+
 
     const uniqueMessagesArray = keepUniqueMessages(DecryptedMessagesSent);
     for(let i = 0 ; i < DecryptedMessagesSent.length ; i++){
