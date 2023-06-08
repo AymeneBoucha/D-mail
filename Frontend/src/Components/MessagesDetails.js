@@ -20,8 +20,11 @@ const MessageDetails = (selectedMessage) => {
   const [fileUrl, setFileUrl] = useState(null);
   const [counter, setCounter]= useState(0);
   const [senderEmail, setSenderEmail]= useState(0);
+  const [receiverEmail, setReceiverEmail]= useState(0);
+  const [fileHashes, setFileHashes] = useState([]);
   const [rep, setRep] = useState(false);
   const [replies, setReplies] = useState([]);
+  const [decryptedSubject, setDecryptedSubject] = useState();
   
   var res=null;
   var loaded=false;
@@ -43,7 +46,8 @@ const MessageDetails = (selectedMessage) => {
     return priKey;
    }
 
-  function decryptMessage(ciphertextt, pubKey, priKey) {
+
+   function decryptMessage(ciphertextt, pubKey, priKey) {
     const sharedSecret = curve.keyFromPrivate(priKey, 'hex').derive(curve.keyFromPublic(pubKey, 'hex').getPublic()).toString('hex');
     const ciphertext = Buffer.from(ciphertextt, 'base64');
     const iv = ciphertext.slice(0, 16);
@@ -57,7 +61,9 @@ const MessageDetails = (selectedMessage) => {
 
 async function getSenderEmail(){
   const result = await userContract.getEmail(msgC.sender);
+  const result1 = await userContract.getEmail(msgC.receiver);
   setSenderEmail(result);
+  setReceiverEmail(result1);
   console.log("sender email is", senderEmail);
 }
 
@@ -100,7 +106,7 @@ async function DecryptedReplies(replies){
     method: "eth_requestAccounts",
   });
   var pubKey = '';
-  if(accounts[0] == msgC.sender){
+  if(accounts[0].toLowerCase() == msgC.sender.toLowerCase()){
      pubKey = await getRecieverPubKey(msgC.receiver);
   }else{
      pubKey = await getRecieverPubKey(msgC.sender);
@@ -122,12 +128,57 @@ async function DecryptedReplies(replies){
     
 
     async function getReplies() {
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  var pubKey = '';
+  if(accounts[0].toLowerCase() == msgC.sender.toLowerCase()){
+     pubKey = await getRecieverPubKey(msgC.receiver);
+  }else{
+     pubKey = await getRecieverPubKey(msgC.sender);
+  }
+   const priKey = await getSenderPriKey(accounts[0]);
       const replies = await chatContract.getReplies(msgC.id);
       const encryptedMessages = replies.responses.map((message) => message.message);
       const senders = replies.responses.map((message) => message.sender);
       const receivers = replies.responses.map((message) => message.receiver);
+      const filesHashs = replies.responses.map((message) => message.fileHash);
+     console.log(filesHashs);
       var sendersEmails = [];
       var  receiversEmails = [];
+      var filesHashes = [];
+      for(let i = 0; i < filesHashs.length ; i++){
+        if(filesHashs[i] == ""){
+          filesHashes.push("");
+        }else{
+          console.log(filesHashs[i], pubKey, priKey);
+         console.log( decryptMessage(filesHashs[i], pubKey, priKey));
+          filesHashes.push(decryptMessage(filesHashs[i], pubKey, priKey));
+        }
+      }
+      setFileHashes(filesHashes);
+      var hashes = [];
+      for (let i = 0; i < fileHashes.length ; i++){
+        const res = await axios({
+          method: 'get',
+          url: `https://gateway.pinata.cloud/ipfs/`+ fileHashes[i],
+          responseType: 'blob',
+        });
+        const contentType = res.headers['content-type'];
+      if (contentType && contentType.startsWith('image/')) {
+        // If the file is an image, display it
+        const imgUrl = URL.createObjectURL(res.data);
+        hashes.push(imgUrl);
+        console.log(imageUrl);
+        setFileUrl(null);
+      } else {
+        // For other file types, display a download link
+        const fileUrl = URL.createObjectURL(res.data);
+        console.log(fileUrl);
+        setFileUrl(fileUrl);
+        setImageUrl(null);
+      }
+      }
       for (let i = 0 ; i < senders.length ; i++){
         const senderEmail = await userContract.getEmail(senders[i]);
         const receiverEmail = await userContract.getEmail(receivers[i]);
@@ -142,23 +193,41 @@ async function DecryptedReplies(replies){
           message: message,
           sender: sendersEmails[index],
           receiver: receiversEmails[index],
+          fileHash: filesHashes[index],
           timestamp: timestamps[index],
         };
       });
   
       setReplies(repliesArray);
+      console.log(replies);
     }
   
     getReplies();
+    console.log(replies);
   }, []);
 
   const getFileFromIPFS = async (hash) => {
     try {
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      var pubKey = '';
+      if(accounts[0].toLowerCase() == msgC.sender.toLowerCase()){
+         pubKey = await getRecieverPubKey(msgC.receiver);
+      }else{
+         pubKey = await getRecieverPubKey(msgC.sender);
+      }
+      //const pubKey = await getRecieverPubKey(msgC.receiver);
+      console.log(pubKey);
+       const priKey = await getSenderPriKey(accounts[0]);
+       setDecryptedSubject(msgC.subject);
+      
+       const decryptedFileHash = decryptMessage(msgC.fileHash, pubKey, priKey);
+       console.log(`https://gateway.pinata.cloud/ipfs/`+ decryptedFileHash);
       const res = await axios({
         method: 'get',
-        url: `https://gateway.pinata.cloud/ipfs/`+msgC.fileHash,
+        url: `https://gateway.pinata.cloud/ipfs/`+ decryptedFileHash,
         responseType: 'blob',
-       
       });
   
       console.log('File retrieved from IPFS:', res.data);
@@ -169,10 +238,12 @@ async function DecryptedReplies(replies){
         // If the file is an image, display it
         const imgUrl = URL.createObjectURL(res.data);
         setImageUrl(imgUrl);
+        console.log(imageUrl);
         setFileUrl(null);
       } else {
         // For other file types, display a download link
         const fileUrl = URL.createObjectURL(res.data);
+        console.log(fileUrl);
         setFileUrl(fileUrl);
         setImageUrl(null);
       }
@@ -185,30 +256,54 @@ async function DecryptedReplies(replies){
   return (
     <div>
       <br />
-      <h2>{msgC.subject}</h2>
+      <h2>{decryptedSubject}</h2>
       <hr />
-      {replies.map((msgC, index) => (
-        <div key={index}>
-          <h5>
-            <b>From: </b>
-            {msgC.sender}
-          </h5>
-          <h5>
-            <b>To: </b>
-            {msgC.receiver}
-          </h5>
-          <h5>
-            <b>Sent on: </b>
-            {msgC.timestamp}
-          </h5>
-          <p>{msgC.message}</p>
-          <div>
-            {msgC.imageUrl && <a href={msgC.imageUrl} download><img src={msgC.imageUrl} alt="Retrieved file" /></a>}
-            {msgC.fileUrl && <a href={msgC.fileUrl} download>Download file</a>}
-          </div>
-          <hr/>
-        </div>
-      ))}
+      {replies.length === 0 ? (
+  <div>
+  <h5>
+        <b>From: </b>
+        {senderEmail}
+      </h5>
+      <h5>
+        <b>To: </b>
+        {msgC.receiversGroup}
+      </h5>
+      <h5>
+        <b>Sent on: </b>
+        {formatTimestamp(msgC.timestamp)}
+      </h5>
+      <p>{msgC.message}</p>
+      <div>
+      {imageUrl &&  <a href={imageUrl}download><img src={imageUrl} alt="Retrieved file" width={800}/></a>}
+            {fileUrl && <a href={fileUrl} download>Download file</a>}
+      </div>
+      <hr/>
+  </div>
+) : (
+  replies.map((msgC, index) => (
+    <div key={index}>
+      <h5>
+        <b>From: </b>
+        {msgC.sender}
+      </h5>
+      <h5>
+        <b>To: </b>
+        {msgC.receiver}
+      </h5>
+      <h5>
+        <b>Sent on: </b>
+        {msgC.timestamp}
+      </h5>
+      <p>{msgC.message}</p>
+      <div>
+      {imageUrl &&  <a href={imageUrl}download><img src={msgC.fileHash} alt="Retrieved file" width={800}/></a>}
+            {fileUrl && <a href={fileUrl} download>Download file</a>}
+      </div>
+      <hr/>
+    </div>
+  ))
+)}
+
     </div>
   );
 };

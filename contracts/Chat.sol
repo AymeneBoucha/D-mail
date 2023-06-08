@@ -2,10 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "./Structures.sol";
+import "./strings.sol";
+
 contract Chat {
+    using strings for *;
+
     Structures structures;
      constructor() {
-    structures = Structures(0x6C330e24A6BDfDf8017994C134E20FE35C38D03A);
+    structures = Structures(0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d);
 }
     enum DeletionStatus {
         NotDeleted,
@@ -40,6 +44,10 @@ contract Chat {
     mapping (uint256 => Reply) public replies;
     Message[] public messages;
 
+function getRep(uint256 id) public view returns(bool){
+    return rep[id];
+}
+
 function getAllArays() public view returns(Message[] memory) {
     return messages;
 }
@@ -48,8 +56,16 @@ function getReplies(uint256 id) public view returns(Reply memory) {
     return replies[id];
 }
 
-    function replyTo(uint256 messageId, string memory response, Message memory messageOriginal, uint256 timestamp) external {
+
+   function replyTo(uint256 messageId, string memory response, Message memory messageOriginal, uint256 timestamp) external {
+    bool conditionMet = false;
     if (replies[messageId].responses.length == 0) {
+        for (uint i = 0; i < messages.length && !conditionMet; i++) {
+            if (messages[i].originalMessageId == messageId) {
+                messages[i].read = false;
+                conditionMet = true;
+            }
+        }
         replies[messageId].responses.push(messageOriginal);
         addReply(messageId, response, messageOriginal, true, timestamp);
     } else {
@@ -57,12 +73,15 @@ function getReplies(uint256 id) public view returns(Reply memory) {
     }
 }
 
+
 function addReply(uint256 messageId, string memory response, Message memory messageOriginal, bool setRep, uint256 timestamp) private {
     uint256 messageTimestamp = (timestamp != 0) ? timestamp : block.timestamp;
+    address wallet = (msg.sender !=  messageOriginal.sender) ? messageOriginal.sender : messageOriginal.receiver;
+    string memory receiver = (msg.sender !=  messageOriginal.sender) ? messageOriginal.receiversGroup : structures.getEmailByAddress(messageOriginal.receiver);
     Message memory message = Message(
         messageCount,
         msg.sender,
-        messageOriginal.sender,
+        wallet,
         messageOriginal.subject,
         response,
         messageTimestamp,
@@ -71,7 +90,7 @@ function addReply(uint256 messageId, string memory response, Message memory mess
         new address[](0),
         messageCount,
         messageOriginal.fileHash,
-        messageOriginal.receiversGroup,
+        receiver,
         DeletionStatus.NotDeleted
     );
     rep[messageCount] = true;
@@ -85,9 +104,6 @@ function addReply(uint256 messageId, string memory response, Message memory mess
     messageCount++;
 }
 
-    
-
-
     uint256 messageCount;
     uint256 shareCount;
 
@@ -100,13 +116,6 @@ function addReply(uint256 messageId, string memory response, Message memory mess
     
 
      Share[] public shares;
-    event MessageShared(
-        uint256 shareId,
-        uint256 messageId,
-        address sender,
-        address[] receivers
-    );
-     
 
       function sendMessage(
         address receiver,
@@ -145,7 +154,19 @@ function addReply(uint256 messageId, string memory response, Message memory mess
         messageCount++;
     }
 
-   function sendMessageToGroup(address[] memory receiver, string calldata subject, string []memory message, string []memory cciMessages,bool isShareble, string memory fileHash, string memory emailGroup, address[] memory cciReceivers, uint256 timestamp) external {
+    function splitStringBySpaces(string memory input) public pure returns (string[] memory) {
+    strings.slice memory inputSlice = input.toSlice();
+    strings.slice memory delimiter = " ".toSlice();
+
+    string[] memory parts = new string[](inputSlice.count(delimiter) + 1);
+    for (uint256 i = 0; i < parts.length; i++) {
+        parts[i] = inputSlice.split(delimiter).toString();
+    }
+
+    return parts;
+}
+
+   function sendMessageToGroup(address[] memory receivers,  address []memory receiversCci, string []memory messageData,bool isShareble, string memory emailGroup, uint256 timestamp) external {
         require(
             structures.checkUserExists(msg.sender) == true,
             "You must have an account"
@@ -153,20 +174,23 @@ function addReply(uint256 messageId, string memory response, Message memory mess
 
         uint256 messageTimestamp = (timestamp != 0) ? timestamp : block.timestamp;
 
-        for(uint i = 0; i<receiver.length; i++){
-            require(structures.checkUserExists(receiver[i]) == true, "Recipient does not exist");
-            Message memory message = Message(messageCount, msg.sender, receiver[i], subject, message[i], messageTimestamp, false, isShareble,
+        for(uint i = 0; i<receivers.length; i++){
+            string[] memory data = splitStringBySpaces(messageData[i]);
+            
+            require(structures.checkUserExists(receivers[i]) == true, "Recipient does not exist");
+            Message memory message = Message(messageCount, msg.sender, receivers[i], data[0], data[1], messageTimestamp, false, isShareble,
                 new address[](0),
-                messageCount, fileHash, emailGroup,DeletionStatus.NotDeleted);
+                messageCount, data[2], emailGroup,DeletionStatus.NotDeleted);
                 rep[messageCount] = false;
         messages.push(message);
         messageCount++;
         }
-        for(uint i = 0; i<cciReceivers.length; i++){
-            require(structures.checkUserExists(cciReceivers[i]) == true, "Recipient does not exist");
-            Message memory message = Message(messageCount, msg.sender, cciReceivers[i], subject, cciMessages[i], messageTimestamp, false, isShareble,
+        for(uint i = receivers.length; i<(receiversCci.length + receivers.length); i++){
+            string[] memory dataCci = splitStringBySpaces(messageData[i]);
+            require(structures.checkUserExists(receiversCci[i-receivers.length]) == true, "Recipient does not exist");
+            Message memory message = Message(messageCount, msg.sender, receiversCci[i-receivers.length], dataCci[0], dataCci[1], messageTimestamp, false, isShareble,
                 new address[](0),
-                messageCount,fileHash, '',DeletionStatus.NotDeleted);
+                messageCount,dataCci[2], '',DeletionStatus.NotDeleted);
                 rep[messageCount] = false;
         messages.push(message);
         messageCount++;
@@ -174,7 +198,7 @@ function addReply(uint256 messageId, string memory response, Message memory mess
 
         }      
 
-         function shareMessage(uint256 messageId, address[] calldata receivers) external {
+         function shareMessage(uint256 messageId, string[] memory encryptedMessages, address[] calldata receivers, string memory emailGroup) external {
     require(messageId < messages.length, "Invalid message ID");
     require(structures.checkUserExists(msg.sender) == true, "You must have an account");
     Message storage messageToShare = messages[messageId];
@@ -185,28 +209,27 @@ function addReply(uint256 messageId, string memory response, Message memory mess
         require(structures.checkUserExists(receivers[i]), "Receiver does not exist");
         Share memory newShare = Share(messageId, block.timestamp, msg.sender, receivers[i]);
         shares.push(newShare);
-        
+
         // Set the originalMessageId of the shared message to the ID of the original message
         Message memory sharedMessage = Message(
             messageCount,
             msg.sender,
             receivers[i],
             messageToShare.subject,
-            messageToShare.message,
+            encryptedMessages[i],
             block.timestamp,
             false,
             true,
             new address[](0),
             messages[messageId].originalMessageId,
             messageToShare.fileHash,
-            messageToShare.receiversGroup,
+            emailGroup,
             DeletionStatus.NotDeleted
         );
         messageCount++;
         messages.push(sharedMessage);
         rep[messageCount] = false;
     }
-    emit MessageShared(shareCount, messageId, msg.sender, receivers);
     shareCount++;
 }
 
@@ -263,28 +286,15 @@ function getShares(uint256 messageId) external view returns (Share[] memory) {
         return messageShares;
     }
 
-    function deleteMessage(address walletAddress, uint256 id) public {
-        require(
-            structures.checkUserExists(walletAddress),
-            "User with given address does not exist."
-        );
-        Message storage message = messages[id];
-        if (message.sender == walletAddress) {
-            if (message.deleted == DeletionStatus.DeletedByReceiver) {
-                message.deleted = DeletionStatus.DeletedBoth;
-            } else {
-                message.deleted = DeletionStatus.DeletedBySender;
-            }
-        }
-        if (message.receiver == walletAddress) {
-            if (message.deleted == DeletionStatus.DeletedBySender) {
-                message.deleted = DeletionStatus.DeletedBoth;
-            } else {
-                message.deleted = DeletionStatus.DeletedByReceiver;
-            }
-        }
+function deleteMessage(address walletAddress, uint256 id) public {
+    require(structures.checkUserExists(walletAddress), "User with given address does not exist.");
+
+    Message storage message = messages[id];
+    if (message.sender == walletAddress) {
+        message.deleted = message.deleted == DeletionStatus.DeletedByReceiver ? DeletionStatus.DeletedBoth : DeletionStatus.DeletedBySender;
     }
-
-
-   
+    if (message.receiver == walletAddress) {
+        message.deleted = message.deleted == DeletionStatus.DeletedBySender ? DeletionStatus.DeletedBoth : DeletionStatus.DeletedByReceiver;
+    }
+}
 }

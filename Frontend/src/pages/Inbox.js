@@ -8,6 +8,7 @@ import '../assets/Inbox.css';
 import { Button, ListGroup } from 'react-bootstrap';
 import { BsPencilSquare } from "react-icons/bs";
  import { FaInbox, FaStar } from "react-icons/fa";
+ import { BsFillPersonFill } from "react-icons/bs";
 import { MdNotificationImportant } from "react-icons/md";
 import { MdLabelImportant } from "react-icons/md";
 // Importation de la Navbar et left bar
@@ -23,6 +24,7 @@ const curve = new ec('secp256k1');
 const Inbox = () => {
   const [messages, setMessages] = useState([]);
   const [showSendMessage, setShowSendMessage] = useState(false);
+  const [adminVerification, setAdminVerification] = useState(false);
 
   const buttons = [
     
@@ -36,6 +38,7 @@ const Inbox = () => {
   ];
 
   const [selectedButton, setSelectedButton] = useState(buttons[0].title);
+  const [selectedDraft, setSelectedDraft] = useState("");
  
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -75,8 +78,21 @@ const Inbox = () => {
     };
   }, []);
 
+  async function admin() {
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+  if(accounts[0].toLowerCase() == "0x7B60eD2A82267aB814256d3aB977ae5434d01d8b".toLowerCase()){
+    console.log("wsalt hna");
+    setAdminVerification(true);
+  }
+  }
 
+  admin();
 
+  function redirect(){
+    window.location.href = "/admin";
+  }
 
   const [hoverIndex, setHoverIndex] = useState(null);
 
@@ -122,7 +138,32 @@ const Inbox = () => {
 </button>
 
 ))}
-
+{adminVerification && 
+        <button
+                className="btn btn-primary btn-orange"
+                style={{
+                  backgroundColor: "white",
+                  color: "#FB723F",
+                  borderRadius: "30px",
+                  border: "2px solid #FB723F",
+                  margin: "0 1rem",
+                  fontSize: "1.1em",
+                  marginTop: "100%"
+                }}
+                onMouseEnter={(e) => (
+                  (e.target.style.backgroundColor = "#F64A0B"),
+                  (e.target.style.color = "white")
+                )}
+                onMouseLeave={(e) => (
+                  (e.target.style.backgroundColor = "white"),
+                  (e.target.style.color = "#F64A0B")
+                )}
+                onClick={redirect}
+              >
+                <BsFillPersonFill className="w-10 h-10 mr-2" />&nbsp;
+                Accounts
+              </button>
+        }
 </div>
           </div>
         </div>
@@ -132,9 +173,11 @@ const Inbox = () => {
       
     </div>
             <div className="col-md-12">
-              {showSendMessage && <SendMessage onSendMessage={handleSendMessage} />}
+              {showSendMessage && <SendMessage onSendMessage={handleSendMessage} selectedDraft={selectedDraft} />}
             </div>
+            
         </div>
+        
     </div>
   );
 }

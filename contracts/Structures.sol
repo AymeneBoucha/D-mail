@@ -7,7 +7,7 @@ contract Structures {
         string email;
         bool exists;
         address walletAddress;
-        bool isAdmin;
+        bool enabled;
     }
     struct Secure {
         bytes32 seed;
@@ -22,12 +22,14 @@ contract Structures {
 
     ID[] public IDs;
 
-   //mapping(bytes32 => string) public IDs;
+    //mapping(bytes32 => string) public IDs;
     mapping(address => Secure) public Keys;
     mapping(address => User) public users;
     address[] public userAddresses;
+    string[] public userEmails;
     address public admin;
-     constructor() {
+
+    constructor() {
         admin = 0x7B60eD2A82267aB814256d3aB977ae5434d01d8b;
     }
 
@@ -39,13 +41,44 @@ contract Structures {
     }
 
     //makeAdmin : to make someone an admin we change isAdmin=>true
-    function makeAdmin(address userAddress) public onlyAdmin {
+    /*function makeAdmin(address userAddress) public onlyAdmin {
         users[userAddress].isAdmin = true;
+    }*/
+
+    function activate(address wallet) public onlyAdmin {
+        require(
+            wallet != address(0),
+            "User with given address does not exist."
+        );
+        require(
+            checkUserExists(wallet) == true,
+            "User with given address does not exist"
+        );
+        users[wallet].enabled = true;
+    }
+
+    function desactivate(address wallet) public onlyAdmin {
+        require(
+            wallet != address(0),
+            "User with given address does not exist."
+        );
+        require(
+            checkUserExists(wallet) == true,
+            "User with given address does not exist"
+        );
+        users[wallet].enabled = false;
     }
 
     function createUserId(string memory email, bytes32 Id) public onlyAdmin {
-        ID memory id =  ID(Id, email);
+        for (uint256 i = 0; i < userEmails.length; i++) {
+            require(
+                !stringsEqual(userEmails[i], email),
+                "The given email already exists!"
+            );
+        }
+        ID memory id = ID(Id, email);
         IDs.push(id);
+        userEmails.push(email);
     }
 
     // Define a new role for admins
@@ -59,12 +92,13 @@ contract Structures {
         admins[userAddress] = true;
     }
 
-    function removeAdmin(address userAddress) public onlyAdmin {
+    /* function removeAdmin(address userAddress) public onlyAdmin {
         admins[userAddress] = false;
         users[userAddress].isAdmin = false;
-    }
-   mapping(string => address) usersByName;
+    }*/
+    mapping(string => address) usersByName;
     mapping(string => address) usersByEmail;
+
     //--------------------------------------------------------------------------------------
 
     function stringsEqual(
@@ -74,16 +108,18 @@ contract Structures {
         return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 
-    function verifyUser(uint id, string memory email) public view returns (bool) {
-    bytes32 idHash = sha256(abi.encode(id));
-    for (uint256 i = 0; i < IDs.length; i++) {
-        if (IDs[i].ID == idHash && stringsEqual(IDs[i].email, email)) {
-            return true;
+    function verifyUser(
+        uint id,
+        string memory email
+    ) public view returns (bool) {
+        bytes32 idHash = sha256(abi.encode(id));
+        for (uint256 i = 0; i < IDs.length; i++) {
+            if (IDs[i].ID == idHash && stringsEqual(IDs[i].email, email)) {
+                return true;
+            }
         }
+        revert("You don't have permission to create an account!");
     }
-    revert("You don't have permission to create an account!");
-}
-
 
     //Creat user
     function createUser(
@@ -96,7 +132,7 @@ contract Structures {
         bytes memory pubKey
     ) public {
         require(bytes(name).length > 0, "You have to specify your name !");
-        User memory user = User(name, email, true, walletAddress, false);
+        User memory user = User(name, email, true, walletAddress, true);
         Secure memory secure = Secure(seed, password, pubKey);
         users[walletAddress] = user;
         userAddresses.push(walletAddress);
@@ -104,37 +140,17 @@ contract Structures {
         usersByEmail[email] = walletAddress;
         Keys[walletAddress] = secure;
         bytes32 idHash = sha256(abi.encode(Id));
-    for (uint256 i = 0; i < IDs.length; i++) {
-        if (IDs[i].ID == idHash) {
-            uint256 lastIndex = IDs.length - 1;
-            if (i != lastIndex) {
-                IDs[i] = IDs[lastIndex];
-            }
-            IDs.pop();
-            return;
-        }
-    }
-    revert("ID not found");
-    }
-
-    //Delete user
-    function deleteUser(address walletAddress) public onlyAdmin {
-        require(
-            walletAddress != address(0),
-            "User with given address does not exist."
-        );
-        delete users[walletAddress];
-        delete usersByName[users[walletAddress].name];
-        delete usersByEmail[users[walletAddress].email];
-        delete Keys[walletAddress];
-        for (uint i = 0; i < userAddresses.length; i++) {
-            if (userAddresses[i] == walletAddress) {
-                userAddresses[i] = userAddresses[userAddresses.length - 1];
-                userAddresses.pop();
-                break;
+        for (uint256 i = 0; i < IDs.length; i++) {
+            if (IDs[i].ID == idHash) {
+                uint256 lastIndex = IDs.length - 1;
+                if (i != lastIndex) {
+                    IDs[i] = IDs[lastIndex];
+                }
+                IDs.pop();
+                return;
             }
         }
-        //emit UserDeleted(walletAddress);
+        revert("ID not found");
     }
 
     function checkUserExists(address user) public view returns (bool) {
@@ -185,15 +201,53 @@ contract Structures {
         );
         return users[adresse].email;
     }
-   function getAllUsers() public view returns (User[] memory) {
-        User[] memory allUsers = new User[](userAddresses.length);
-        for (uint i = 0; i < userAddresses.length; i++) {
-            allUsers[i] = users[userAddresses[i]];
+
+function countUsers(bool enabled) public view returns (uint) {
+    uint cpt = 0;
+    for(uint i = 0; i < userAddresses.length; i++){
+        if(users[userAddresses[i]].enabled == enabled){
+            cpt++;
         }
-        return allUsers;
+    }
+    return cpt;
+}
+
+function getEmailByAddress(address wallet) public view returns(string memory){
+    return users[wallet].email;
+}
+
+function getAllUsers() public view returns (User[] memory) {
+    uint enabledUsersCount = countUsers(true);
+    User[] memory allUsers = new User[](enabledUsersCount);
+    uint currentIndex = 0;
+
+    for (uint i = 0; i < userAddresses.length; i++) {
+        if (users[userAddresses[i]].enabled == true) {
+            allUsers[currentIndex] = users[userAddresses[i]];
+            currentIndex++;
+        }
     }
 
-     function getAllUsersIDsBackup() public view returns (ID[] memory) {
+    return allUsers;
+}
+
+function getAllDesactivatedUsers() public view returns (User[] memory) {
+    uint disabledUsersCount = countUsers(false);
+    User[] memory allUsers = new User[](disabledUsersCount);
+    uint currentIndex = 0;
+
+    for (uint i = 0; i < userAddresses.length; i++) {
+        if (users[userAddresses[i]].enabled == false) {
+            allUsers[currentIndex] = users[userAddresses[i]];
+            currentIndex++;
+        }
+    }
+
+    return allUsers;
+}
+
+
+    function getAllUsersIDsBackup() public view returns (ID[] memory) {
         ID[] memory IDsBackup = new ID[](IDs.length);
         for (uint i = 0; i < IDs.length; i++) {
             IDsBackup[i] = IDs[i];
@@ -205,23 +259,12 @@ contract Structures {
         return IDs;
     }
 
-    function editUser(
-        address walletAddress,
-        string memory name,
-        string memory email,
-        bool isAdmin
-    ) public onlyAdmin {
+    //Change password
+    function changePasswordUser(address walletAddress, bytes32 password) public {
         require(
-            checkUserExists(walletAddress),
+            walletAddress != address(0),
             "User with given address does not exist."
         );
-        User storage user = users[walletAddress];
-        user.name = name;
-        user.email = email;
-        user.isAdmin = isAdmin;
-        usersByName[name] = walletAddress;
-        usersByEmail[email] = walletAddress;
-    
+        Keys[walletAddress].password = password;
     }
-
 }

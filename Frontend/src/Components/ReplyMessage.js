@@ -77,18 +77,6 @@ const ReplyMessage = ( {selectedMessage} ) => {
     return receiversAddresses;
    }
 
-   async function getRecieversPubKey(addresses) {
-    const ReceiversPubKeys = [];
-    for (let i = 0; i < addresses.length; i++){
-      const pubKeyX = await userContract.getRecieverPubKey(addresses[i]);
-      console.log(pubKeyX);
-    const pubKey = pubKeyX.slice(2);
-    ReceiversPubKeys.push(pubKey);
-    }
-    console.log(ReceiversPubKeys);
-    return ReceiversPubKeys;
-   }
-
 
   async function replyMessage(event) {
     event.preventDefault();
@@ -96,7 +84,7 @@ const ReplyMessage = ( {selectedMessage} ) => {
     if (fileImg) {
       try {
 
-          /*const formData = new FormData();
+          const formData = new FormData();
           formData.append("file", fileImg);
 
           console.log("before axios");
@@ -117,26 +105,38 @@ const ReplyMessage = ( {selectedMessage} ) => {
           const ImgHash = `${resFile.data.IpfsHash}`;
        console.log(ImgHash); 
 
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    const result = await userContract.getName(accounts[0]);
-    setWalletAddressName(result);
-    setWalletAddress(accounts[0]);
-    const address = await userContract.getAddress(emailReceiver);
-    const priKey = await getSenderPriKey(accounts[0]);
-    const recieverPubKey = await getRecieverPubKey(address);
-    console.log("Receiver public key : " + recieverPubKey);
-    const encryptedMessage = encryptMessage(body, recieverPubKey, priKey);
-    console.log("encrypted message : " + encryptedMessage);
-    const tx = await chatContract.sendMessage(address, subject, encryptedMessage, shareable, `${resFile.data.IpfsHash}`, emailReceiver);
-    console.log(tx.hash);
-
-    setIsExecuted(true);
-    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);*/
+       setIsLoading(true);
+       //console.log(getReceiversAddresses(emailReceiver));
+       const accounts = await window.ethereum.request({
+         method: "eth_requestAccounts",
+       });
+       const result = await userContract.getName(accounts[0]);
+       setWalletAddressName(result);
+       setWalletAddress(accounts[0]);
+       const priKey = await getSenderPriKey(accounts[0]);
+       console.log("priKey: " + priKey);
+       console.log(emailReceiver);
+       const receiversArray = getReceiversAddresses(emailReceiver);
+       console.log(receiversArray);
+     
+           const pubKey = await getRecieverPubKey(selectedMessage.sender);
+           const encryptedResponse = encryptMessage(body, pubKey, priKey);
+           const encryptedSelected = selectedMessage;
+           encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
+           encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
+           encryptedSelected.fileHash = encryptMessage(`${resFile.data.IpfsHash}`, pubKey, priKey);
+           if (datetime == ''){
+             const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, 0);
+             //setIsMessageSent(true);
+           }else{
+             const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, parseTimestamp(datetime));
+           }
+           
+       setIsLoading(false);
   } catch (error) {
     console.log("Error sending File to IPFS: ")
     console.log(error);
+    setIsLoading(false);
   }
 }else{
   try {
@@ -153,11 +153,19 @@ const ReplyMessage = ( {selectedMessage} ) => {
   console.log(emailReceiver);
   const receiversArray = getReceiversAddresses(emailReceiver);
   console.log(receiversArray);
-
-      const pubKey = await getRecieverPubKey(selectedMessage.sender);
+var pubKey = "";
+  if(selectedMessage.sender.toLowerCase() == accounts[0].toLowerCase()){
+      pubKey = await getRecieverPubKey(selectedMessage.receiver);
+  }else{
+    pubKey = await getRecieverPubKey(selectedMessage.sender);
+    setEmailReceiver(getEmail(selectedMessage.receiver));
+  }
+      
       const encryptedResponse = encryptMessage(body, pubKey, priKey);
       const encryptedSelected = selectedMessage;
       encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
+      encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
+      encryptedSelected.fileHash = "";
       console.log(encryptedSelected.message);
       if (datetime == ''){
         const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, 0);
@@ -204,7 +212,15 @@ const ReplyMessage = ( {selectedMessage} ) => {
     }
 
     async function getEmail() {
-        const result = await userContract.getEmail(selectedMessage.sender);
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+        var result = '';
+        if(selectedMessage.sender.toLowerCase() == accounts[0].toLowerCase()){
+          result = await userContract.getEmail(selectedMessage.receiver);
+      }else{
+        result = await userContract.getEmail(selectedMessage.sender);
+      }
         return result;
       }
       

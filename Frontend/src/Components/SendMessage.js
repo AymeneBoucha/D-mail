@@ -2,21 +2,35 @@ import { ethers } from "ethers";
 import { useState, useEffect } from "react";
 import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
-import {contractAddressStructures, contractAddressChat} from "../App"
+import {contractAddressStructures, contractAddressChat, contractAddressOperations} from "../App"
+import OperationsContract from '../Operations.sol/Operations.json';
 import { ec } from 'elliptic';
 import crypto from 'crypto-browserify';
 import axios from "axios";
 import { BeatLoader } from 'react-spinners';
+import  "../assets/shareable.css";
 const BigNumber = require('bignumber.js');
+
 
 const curve = new ec('secp256k1');
 
-const SendMessage = () => {
-  const [emailReceiver, setEmailReceiver] = useState("");
+const SendMessage = (selectedDraft) => {
+  var subjectD = "";
+  var messageD = "";
+  var emailD = "";
+  if (selectedDraft !== "") {
+    const draft = selectedDraft;
+    const msg = draft.selectedDraft;
+    subjectD = msg.subject;
+    messageD = msg.message;
+    emailD = msg.receiversArray;
+  }
+
+  const [emailReceiver, setEmailReceiver] = useState(emailD || "");
   const [cci, setCCI] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(subjectD || "");
   const [fileImg, setFileImg] = useState(null);
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(messageD || "");
   const [walletAddress, setWalletAddress] = useState("");
   const [usersEmails, setUsersEmails] = useState([]);
   const [walletAddressName, setWalletAddressName] = useState("");
@@ -34,6 +48,7 @@ const SendMessage = () => {
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
   const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
+  const opContract = new ethers.Contract(contractAddressOperations , OperationsContract.abi, signer);
 
   const handleClick = () => {
     setShowCCI(!showCCI);
@@ -57,8 +72,6 @@ const SendMessage = () => {
    async function getRecieverPubKey(address) {
     const pubKeyX = await userContract.getRecieverPubKey(address);
     console.log(pubKeyX);
-   // const bytes32PubKeyInverse = Buffer.from(pubKeyX, 'hex');
-    //const pubKey = bytes32PubKeyInverse.toString('hex');
     const pubKey = pubKeyX.slice(2);
     return pubKey;
    }
@@ -71,7 +84,7 @@ const SendMessage = () => {
    }
 
   async function getReceiversAddresses(receiver){
-    const receiversArray = receiver.split(",");
+    const receiversArray = receiver.split(/[,\s]+/);
     const receiversAddresses = [];
     for(let i = 0; i<receiversArray.length; i++){
       const address = await userContract.getAddress(receiversArray[i]);
@@ -84,11 +97,9 @@ const SendMessage = () => {
     const ReceiversPubKeys = [];
     for (let i = 0; i < addresses.length; i++){
       const pubKeyX = await userContract.getRecieverPubKey(addresses[i]);
-      console.log(pubKeyX);
     const pubKey = pubKeyX.slice(2);
     ReceiversPubKeys.push(pubKey);
     }
-    console.log(ReceiversPubKeys);
     return ReceiversPubKeys;
    }
 
@@ -100,11 +111,24 @@ const SendMessage = () => {
     }
     return encryptedMessages;
    }
+   
+   function concatenate(subjects, messages, filesHashes, subjectsCci, messagesCci, filesHashesCci){
+    const messageData = [];
+    for(let i = 0 ; i < subjects.length ; i++){
+      messageData.push([subjects[i], messages[i], filesHashes[i]].join(" "));
+    }
+    for(let i = subjects.length ; i < (subjectsCci.length + subjects.length) ; i++){
+      console.log(i);
+      messageData.push([subjectsCci[i - subjects.length], messagesCci[i - subjects.length], filesHashesCci[i - subjects.length]].join(" "));
+    }
+    return messageData;
+   }
 
   async function sendMessage(event) {
     event.preventDefault();
 
     if (fileImg) {
+      setIsLoading(true);
       try {
 
           const formData = new FormData();
@@ -137,16 +161,78 @@ const SendMessage = () => {
     const address = await userContract.getAddress(emailReceiver);
     const priKey = await getSenderPriKey(accounts[0]);
     const recieverPubKey = await getRecieverPubKey(address);
-    console.log("Receiver public key : " + recieverPubKey);
+   /* console.log("Receiver public key : " + recieverPubKey);
     const encryptedMessage = encryptMessage(body, recieverPubKey, priKey);
-    console.log("encrypted message : " + encryptedMessage);
-    const tx = await chatContract.sendMessage(address, subject, encryptedMessage, shareable, `${resFile.data.IpfsHash}`, emailReceiver);
-    console.log(tx.hash);
-
-    setIsExecuted(true);
+    console.log("encrypted message : " + encryptedMessage);*/
+    const cciReceivers = cci.split(/[,\s]+/);
+    const receiversAddresses = await getReceiversAddresses(emailReceiver);
+    if(receiversAddresses.length == 1 && cciReceivers.length == 0){
+      const pubKey = recieverPubKey;
+      const encryptedMessage = encryptMessage(body, pubKey, priKey);
+      const encryptedSubject = encryptMessage(subject, pubKey, priKey);
+      const encryptedFileHash = encryptMessage(`${resFile.data.IpfsHash}`, pubKey, priKey);
+      if (datetime == ''){
+        const tx = await chatContract.sendMessage(receiversAddresses[0], encryptedSubject, encryptedMessage, shareable, encryptedFileHash, emailReceiver, 0);
+        setIsExecuted(true);
     setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+    setIsLoading(false);
+      }else{
+        const tx = await chatContract.sendMessage(receiversAddresses[0], encryptedSubject, encryptedMessage, shareable, encryptedFileHash, emailReceiver, parseTimestamp(datetime));
+        setIsExecuted(true);
+    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+    setIsLoading(false);
+      }
+    }else{
+      const pubKeys = await getRecieversPubKey(receiversAddresses)
+      console.log("\n\n\n" + body, pubKeys, priKey);
+      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
+      const encryptedSubjects = await setEncryptedMessages(subject, pubKeys, priKey);
+      const encryptedHashes = await setEncryptedMessages(`${resFile.data.IpfsHash}`, pubKeys, priKey);
+      const messageData = concatenate(encryptedSubjects, encryptedMessages, encryptedHashes, [], [], []);
+      if(cci === ""){
+        if (datetime == ''){
+          console.log(messageData);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, [], messageData, shareable, emailReceiver, 0);
+        setIsExecuted(true);
+    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+    setIsLoading(false);
+        }else{
+          console.log(messageData);
+          const tx = await chatContract.sendMessageToGroup(receiversAddresses, [], messageData, shareable,  emailReceiver, parseTimestamp(datetime));
+          setIsExecuted(true);
+    setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+    setIsLoading(false);
+        }
+      }
+      else{
+        const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
+      const encryptedSubjects = await setEncryptedMessages(subject, pubKeys, priKey);
+      const encryptedHashes = await setEncryptedMessages(`${resFile.data.IpfsHash}`, pubKeys, priKey);
+        const cciReceivers = await getReceiversAddresses(cci);
+        const pubKeysCci = await getRecieversPubKey(cciReceivers)
+      const encryptedMessagesCci = await setEncryptedMessages(body, pubKeysCci, priKey);
+      const encryptedSubjectsCci = await setEncryptedMessages(subject, pubKeysCci, priKey);
+      const encryptedFilesHashsCci= await setEncryptedMessages(`${resFile.data.IpfsHash}`, pubKeysCci, priKey);
+      const messageData = concatenate(encryptedSubjects, encryptedMessages, encryptedHashes, encryptedSubjectsCci, encryptedMessagesCci, encryptedFilesHashsCci);
+      if (datetime == ''){
+        console.log(messageData);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, cciReceivers, messageData, shareable, emailReceiver, 0);
+        setIsExecuted(true);
+        setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+        setIsLoading(false);
+      }else{
+        console.log(messageData);
+        console.log('ghjklhlm');
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, cciReceivers, messageData, shareable, emailReceiver, parseTimestamp(datetime));
+        setIsExecuted(true);
+        setLink("https://mumbai.polygonscan.com/tx/" + tx.hash);
+        setIsLoading(false);
+      }
+      }
+    }
+    
   } catch (error) {
-    console.log("Error sending File to IPFS: ")
+    console.log("Error sending File to IPFS: ");
     console.log(error);
   }
 }else{
@@ -162,49 +248,89 @@ const SendMessage = () => {
   const priKey = await getSenderPriKey(accounts[0]);
   console.log("priKey: " + priKey);
   console.log(emailReceiver);
-  const receiversArray = getReceiversAddresses(emailReceiver);
-  console.log(receiversArray);
+  const cciReceivers = cci.split(/[,\s]+/);
 
     const receiversAddresses = await getReceiversAddresses(emailReceiver);
-    if(receiversAddresses.length == 1){
+    if(receiversAddresses.length == 1 && cciReceivers.length == 0){
       const pubKey = await getRecieverPubKey(receiversAddresses[0]);
       const encryptedMessage = encryptMessage(body, pubKey, priKey);
+      const encryptedSubject = encryptMessage(subject, pubKey, priKey);
       if (datetime == ''){
-        const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, shareable, '', emailReceiver, 0);
+        const tx = await chatContract.sendMessage(receiversAddresses[0], encryptedSubject, encryptedMessage, shareable, '', emailReceiver, 0);
         //setIsMessageSent(true);
       }else{
         console.log("timestamp : " + parseTimestamp(datetime));
-        const tx = await chatContract.sendMessage(receiversAddresses[0], subject, encryptedMessage, shareable, '', emailReceiver, parseTimestamp(datetime));
+
+        const tx = await chatContract.sendMessage(receiversAddresses[0], encryptedSubject, encryptedMessage, shareable, '', emailReceiver, parseTimestamp(datetime));
       }
       
     }else{
-      const pubKeys = await getRecieversPubKey(receiversAddresses)
-      console.log("\n\n\n" + body, pubKeys, priKey);
-      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey)
+      const receiversAddresses = await getReceiversAddresses(emailReceiver);
+      const pubKeys = await getRecieversPubKey(receiversAddresses);
+      //console.log("\n\n\n" + body, pubKeys, priKey);
+      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey);
+      //console.log(encryptedMessages);
+      const encryptedSubjects = await setEncryptedMessages(subject, pubKeys, priKey);
+      const messageData = concatenate(encryptedSubjects, encryptedMessages, [], [], [], []);
       if(cci === ""){
         if (datetime == ''){
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [], '', '', emailReceiver, [], 0);
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, [], messageData, shareable, emailReceiver, 0);
+        console.log(tx);
         }else{
-          const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, [], '', '', emailReceiver, [], parseTimestamp(datetime));
+          const tx = await chatContract.sendMessageToGroup(receiversAddresses, [], messageData, shareable, emailReceiver, parseTimestamp(datetime));
         }
       }
       else{
+        const receiversAddresses = await getReceiversAddresses(emailReceiver);
+      const pubKeys = await getRecieversPubKey(receiversAddresses);
+      //console.log("\n\n\n" + body, pubKeys, priKey);
+      const encryptedMessages = await setEncryptedMessages(body, pubKeys, priKey);
+      //console.log(encryptedMessages);
+      const encryptedSubjects = await setEncryptedMessages(subject, pubKeys, priKey);
         const cciReceivers = await getReceiversAddresses(cci);
-        const pubKeys = await getRecieversPubKey(cciReceivers)
-      const encryptedCCiMessages = await setEncryptedMessages(body, pubKeys, priKey)
+        const pubKeysCci = await getRecieversPubKey(cciReceivers);
+      const encryptedCCiMessages = await setEncryptedMessages(body, pubKeysCci, priKey);
+      const encryptedSubjectsCci =  await setEncryptedMessages(subject, pubKeysCci, priKey)
+        const messageData = concatenate(encryptedSubjects, encryptedMessages,[], encryptedSubjectsCci, encryptedCCiMessages, []);
+        console.log(messageData);
       if (datetime == ''){
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', '', emailReceiver, cciReceivers, 0);
-      }else{
-        const tx = await chatContract.sendMessageToGroup(receiversAddresses, subject, encryptedMessages, encryptedCCiMessages, '', '', emailReceiver, cciReceivers, parseTimestamp(datetime));
+        
+                const tx = await chatContract.sendMessageToGroup(receiversAddresses, cciReceivers, messageData, shareable, emailReceiver, 0);
+      }else{    
+        const tx = await chatContract.sendMessageToGroup(receiversAddresses, cciReceivers, messageData, shareable, emailReceiver, parseTimestamp(datetime));
       }
       }
   }
   setIsLoading(false);
 }catch(error){
+  console.log('Transaction failed with revert reason:', error);
   setIsLoading(false);
 }
 }
 
+if(subjectD !== undefined){
+  await opContract.deleteDraft(selectedDraft.selectedDraft.id.toString())
+}
+  }
+
+  async function saveDraft(event){
+    const formData = new FormData();
+          formData.append("file", fileImg);
+
+          console.log("before axios");
+          const resFile = await axios({
+            method: "post",
+            url: "https://api.pinata.cloud/pinning/pinFileToIPFS",
+            data: formData,
+            headers: {
+                'pinata_api_key': '8e331831d74d6b1a5506',
+                'pinata_secret_api_key': "969199b06511acf39a97b54d4e47a21021f22daef928621b04498edc0448515b",
+                "Content-Type": "multipart/form-data"
+            },
+        });
+    const address = await userContract.getAddress(emailReceiver);
+    const tx = await opContract.saveDraft(subject, body, shareable,[address], emailReceiver ,`${resFile.data.IpfsHash}`);
+    console.log(tx.hash);
   }
 
   async function getAllUsers() {
@@ -236,6 +362,12 @@ const SendMessage = () => {
     return new BigNumber(timestamp).toNumber();
     }
   
+    const handleCloseMessage = () => {
+      const confirmed = window.confirm("Do you want to save this draft ?");
+      if (confirmed) {
+        saveDraft();
+      }
+    };
 
   getAllUsers();
 
@@ -243,7 +375,7 @@ const SendMessage = () => {
   return (
     <div className="card-body p-0 text-center m-2" style={{/*display: isMessageSent ? "none" : "block",*/ position: "fixed", bottom: 0, right: 0, width: "100%", maxWidth: "600px", height: "auto", backgroundColor: "#fff", borderRadius: "10px", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.25)", zIndex: "10" }}>
   <div className="card-header bg-dark text-white" style={{borderRadius: "8px 8px 0 0", cursor: "pointer"}} onClick={() => setIsMinimized(!isMinimized)}>
-  
+  <span className="closeMessage" onClick={handleCloseMessage}>&times;</span>
   <h5 className="mt-0">New Message</h5>
 </div>
 

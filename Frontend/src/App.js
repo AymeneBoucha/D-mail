@@ -1,10 +1,12 @@
 import { ethers } from "ethers";
-import { useState, useEffect } from 'react';
-import ChatContract from './Chat.sol/Chat.json';
-import StructuresContract from './Structures.sol/Structures.json';
+import { useState, useEffect } from "react";
+import ChatContract from "./Chat.sol/Chat.json";
+import StructuresContract from "./Structures.sol/Structures.json";
 import NameForum from "./pages/NameForum";
 import ConnectWallet from "./pages/ConnectWallet";
+import Drafts from "./Components/Drafts";
 import Login from "./pages/Login";
+import Forgot from "./pages/Forgot";
 import Admin from "./pages/Admin";
 import {
   BrowserRouter as Router,
@@ -16,46 +18,70 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddressStructures =  '0x6C330e24A6BDfDf8017994C134E20FE35C38D03A';
-const contractAddressChat = '0x1690926D949E258f61b9095EFAA0bF0D34A71171';
-const contractAddressOperations = '0xACfA2f1a9F7E3b54A6cAe2322b23ece319cB226A';
-export { contractAddressStructures, contractAddressChat, contractAddressOperations };
+const contractAddressStructures = "0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d";
+const contractAddressChat = "0x189d58d77Dc2a9971FE99869F90a27eb0Ea6c1FB";
+const contractAddressOperations = "0x2481a7C1676aAEF5F6c99B7E8c909fdF4f904f3C";
+export {
+  contractAddressStructures,
+  contractAddressChat,
+  contractAddressOperations,
+};
 
 function App() {
-  const [name, setName] = useState('');
-  const [walletAddress, setWalletAddress] = useState('');
- const [connected,setConnected]=useState("");
+  const [name, setName] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [connected, setConnected] = useState("");
+  const [verify, setVerify] = useState("");
 
-
- const provider = new ethers.providers.Web3Provider(window.ethereum);
- const signer = provider.getSigner();
- const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
- const userContract = new ethers.Contract(contractAddressStructures , StructuresContract.abi, signer);
-
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const chatContract = new ethers.Contract(
+    contractAddressChat,
+    ChatContract.abi,
+    signer
+  );
+  const userContract = new ethers.Contract(
+    contractAddressStructures,
+    StructuresContract.abi,
+    signer
+  );
 
   async function connectWallet() {
-    const result= await window.ethereum.isConnected();
+    const result = await window.ethereum.isConnected();
     console.log(result);
     setConnected(result);
   }
 
+async function verifyAdmin(){
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+  if(accounts[0].toLowerCase() === "0x7B60eD2A82267aB814256d3aB977ae5434d01d8b".toLowerCase() ){
+    setVerify(true);
+  }else{
+    setVerify(false);
+  }
+}
+   
   useEffect(() => {
-    connectWallet() ;
+    connectWallet();
+    verifyAdmin();
   }, []);
   return (
-     <Router>
+    <Router>
       <Routes>
-      <Route path="/inbox" element={<Inbox />} />
+        <Route path="/inbox" element={<Inbox />} />
 
-        
         <Route path="/sendmsg" element={<SendMessage />} />
 
-      <Route path="/" element={<Login />} />
+        <Route path="/" element={<Login />} />
 
-    <Route path="/create" element={<ConnectWallet />} />
-    <Route path="/name" element={<NameForum />} />
-    <Route path="/admin" element={<Admin/>} />
-    </Routes>
+        <Route path="/create" element={<ConnectWallet />} />
+        <Route path="/drafts" element={<Drafts />} />
+        <Route path="/forgot" element={<Forgot />} />
+        {verify && <Route path="/name" element={<NameForum />} />}
+        {verify && <Route path="/admin" element={<Admin />} />}
+      </Routes>
     </Router>
 
     /*<Inbox/>

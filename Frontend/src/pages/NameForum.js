@@ -1,9 +1,11 @@
 import "../assets/App.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
 import {contractAddressStructures, contractAddressChat} from "../App"
+import { isEmail } from 'email-validator';
+import Modal from 'react-modal';
 
 function NameForum() {
 
@@ -12,6 +14,10 @@ function NameForum() {
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
+  const [emailError, setEmailError] = useState(null);
+  const [idError, setIdError] = useState(null);
 
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
@@ -23,10 +29,42 @@ function NameForum() {
     setWalletAddress(accounts[0]);
   }
   
+// Function to open success popup
+const openSuccessModal = () => {
+  setIsSuccessModalOpen(true);
+};
+
+// Function to close success popup
+const closeSuccessModal = () => {
+  setIsSuccessModalOpen(false);
+};
+
+useEffect(() => {
+  // Set app element when component mounts
+  Modal.setAppElement('#root');
+}, []);
 
   async function createUserId() {
     try{
+      var err = false;
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isValid = emailRegex.test(email);
+  
+      if (!isValid) {
+        setEmailError("this is not a valid email address");
+        err = true;
+      } else {
+        setEmailError(null);
+      }
+      if (userId.length == 0) {
+        setIdError("the id shouldn't be empty, it must be of a 32 bit format");
+        err = true;
+      } else {
+        setIdError(null);
+      }
+      if (err) return;
     await userContract.createUserId(email, userId);
+    openSuccessModal();
     window.location.href = "/create";
     }
     catch(e) {
@@ -34,9 +72,16 @@ function NameForum() {
     }
   }
  
+  const validateEmail = () => {
+    const isValid = isEmail(email);
+    // Perform any additional logic based on the email validation result
+    console.log(`Email is ${isValid ? 'valid' : 'invalid'}`);
+  };
+
+ 
 
   return (
-    <section className="vh-100" style={{ backgroundImage: "url('/Background.png')", backgroundRepeat: 'no-repeat', backgroundSize: 'cover', backgroundPosition: 'center center', margin: '0', height: '100vh' }}>
+    <section className="vh-100" style={{overflowX: "hidden", backgroundImage: "url('/Background.png')", backgroundRepeat: 'no-repeat', backgroundSize: 'cover', backgroundPosition: 'center center', margin: '0', height: '100vh' }}>
   <div className="container py-5 h-100">
     <div className="row d-flex justify-content-center align-items-center h-100">
       <div className="col-12 col-md-8 col-lg-6 col-xl-5">
@@ -54,21 +99,22 @@ function NameForum() {
     type="email"
     id="email"
     placeholder=""
-    className="form-control form-control-lg mb-5"
+    pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+    className="form-control form-control-lg"
     value={email}
     onChange={e => setEmail(e.target.value)}
-    pattern="[a-z]+\.[a-z]+@esi-sba\.dz"
     required
     style={{
       borderRadius: '10px',
       boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.25)',
       transition: 'all 0.3s ease',
-      background: `url(key.png) no-repeat 10px center / auto 20px`,
+      background: `url(email.png) no-repeat 10px center / auto 20px`,
       paddingLeft: '40px',
     }}
     onFocus={(e) => e.target.style.boxShadow = '0px 0px 8px rgba(0, 0, 0, 0.4)'}
     onBlur={(e) => e.target.style.boxShadow = '0px 2px 4px rgba(0, 0, 0, 0.25)'}
   />
+  {emailError && <p className="text-danger">{emailError}</p>}
 </div>
 
                     <div className="form-floating mb-3">
@@ -77,7 +123,7 @@ function NameForum() {
                       type="text"
                       id="userId"
                       placeholder=""
-                      className="form-control form-control-lg mb-5"
+                      className="form-control form-control-lg"
                       value={userId}
                       onChange={e => setUserId(e.target.value)}
                       required
@@ -90,9 +136,11 @@ function NameForum() {
   }}
   onFocus={(e) => e.target.style.boxShadow = '0px 0px 8px rgba(0, 0, 0, 0.4)'}
   onBlur={(e) => e.target.style.boxShadow = '0px 2px 4px rgba(0, 0, 0, 0.25)'}
-                    />
+  />
+                    {idError && <p className="text-danger">{idError}</p>}
                   </div>
 
+<br></br>
                   <button
                     className="btn btn-outline-light btn-lg px-5"
                     type="submit"
@@ -116,6 +164,20 @@ function NameForum() {
           </div>
         </div>
       </div>
+      <Modal
+        isOpen={isSuccessModalOpen}
+        onRequestClose={closeSuccessModal}
+        className="modal"
+        overlayClassName="overlay"
+      >
+        <div className="success-popup">
+          <h3>User Created Successfully!</h3>
+          <p>Thank you for creating a new user.</p>
+          <button className="close-button" onClick={closeSuccessModal}>
+            Close
+          </button>
+        </div>
+      </Modal>
     </section>
   );
 }

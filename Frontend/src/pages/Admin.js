@@ -3,13 +3,14 @@ import { ethers } from 'ethers';
 import ChatContract from '../Chat.sol/Chat.json';
 import StructuresContract from '../Structures.sol/Structures.json';
 import '../assets/accounts.css';
-import { ListGroup } from 'react-bootstrap';
 import { BsPersonFillAdd,BsArchiveFill,BsWallet } from "react-icons/bs";
 import { FaArchive, FaInbox, FaStar, FaUser,FaRegUser } from "react-icons/fa";
 import {HiUsers} from  "react-icons/hi";
-import {MdGroups,MdManageAccounts,MdDelete,MdOutlineMail,MdEdit} from "react-icons/md";
+import {MdGroups,MdManageAccounts,MdDelete,MdOutlineMail} from "react-icons/md";
 import Navbar from '../Components/NavBar';
 import {contractAddressStructures, contractAddressChat} from "../App"
+import { MdClose, MdCheck} from 'react-icons/md';
+import { Modal, Button } from "react-bootstrap";
 
 const Admin = () => {
   const [users, setUsers] = useState([]);
@@ -17,6 +18,10 @@ const Admin = () => {
   const [showAddUser, setShowAddUser] = useState(false);
   const [NewUsers, setNewUsers] = useState({});
   const [selectedButton, setSelectedButton] = useState("Users Accounts");
+  const [showModal, setShowModal] = useState(false);
+  const [hideModal, setHideModal] = useState(true);
+  const[walletAddress, setWalletAddress] = useState("");
+
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
   const chatContract = new ethers.Contract(contractAddressChat , ChatContract.abi, signer);
@@ -32,6 +37,27 @@ const Admin = () => {
     setUsers(allUsers);
   }
 
+  function handleSelectedUser(user){
+    setShowModal(true);
+    setHideModal(false);
+    setWalletAddress(user.walletAddress);
+  }
+
+
+  async function confirmModal(){
+    if(selectedButton === "Users Accounts"){
+      await userContract.desactivate(walletAddress);
+    }else if(selectedButton === "Desactivated"){
+      await userContract.activate(walletAddress);
+    }
+    hideModall();
+  }
+
+function hideModall(){
+  setHideModal(true);
+  setShowModal(false);
+}
+
   async function getAllUsers() {
     const allUsers = await userContract.getAllUsers();
     return allUsers;
@@ -41,7 +67,10 @@ const Admin = () => {
     const allUsersIDs = await userContract.getAllUsersIDs();
     return allUsersIDs;
   }
-
+  async function getAllUsersdesac() {
+    const allUsersdesac = await userContract.getAllDesactivatedUsers();
+    return allUsersdesac;
+  }
 
   const handleCreateUser = () => {
     window.open("/name", "_blank");
@@ -59,7 +88,11 @@ const Admin = () => {
       setUsers(usersIDs);
       setSelectedButton(title);
       console.log(usersIDs);
-    } else if (title === "Archive") {
+    } else if (title === "Desactivated") {
+      const usersAct = await getAllUsersdesac();
+      console.log(usersAct);
+      setUsers(usersAct);
+      setSelectedButton(title);
       // Perform action for "Archive" button
     }
     // Add more conditions for other buttons if needed
@@ -73,14 +106,17 @@ const Admin = () => {
     { icon: <MdManageAccounts className="w-[1.7rem]  h-[1.7rem]" />, title: "Users Accounts" },
     { icon: <MdGroups className="w-[1.7rem]  h-[1.7rem]" />, title: "Users IDs" },
     
-    { icon: <BsArchiveFill className="w-[1.7rem]  h-[1.7rem]" />, title: "Archive" },
+    { icon: <BsArchiveFill className="w-[1.7rem]  h-[1.7rem]" />, title: "Desactivated" },
   ];
+
+  function redirect(){
+    window.location.href = "/Inbox";
+  }
 
   const [hoverIndex, setHoverIndex] = useState(null);
 
   return (
-     <div className="p-0" style={{fontSize: '1.6rem'}}>
-      
+     <div className="p-0" style={{overflowX: "hidden", fontSize: '1.6rem'}}>
         <Navbar style={{ zIndex: 1, width: '100%', position: 'fixed' }} className="pl-0 pr-0"/>
         <div className="row">
           <div className="col-md-2 offset-md-2" style={{ marginTop: '80px', zIndex: 1 }}>
@@ -95,19 +131,59 @@ const Admin = () => {
                   </button>
                 </div>
                 <div className="pl-6 pt-4 flex flex-col items-start space-y-6" style={{display: 'flex', flexDirection: 'column'}}>
-  {buttons.map((button) => (
-    <button key={button.title} className="text-gray-600 flex items-center gap-6" onClick={() => handleClick(button.title)} style={{borderRadius: 10, marginTop: 10, padding: '10px', border:'none', backgroundColor: 'white', cursor: 'pointer', textAlign: 'left'}}
-    onMouseEnter={(e) => (e.target.style.backgroundColor = "#FB723F")}
-              onMouseLeave={(e) => (e.target.style.backgroundColor = "#FFF")}
-    >
- 
-     {button.icon}
-
-            {button.title}
-
-     
-    </button>
-  ))}
+                {buttons.map((button) => (
+  <button
+    key={button.title}
+    className="text-gray-600 flex items-center gap-6"
+    onClick={() => handleClick(button.title)}
+    style={{
+      borderRadius: 10,
+      marginTop: 10,
+      padding: '10px',
+      border: 'none',
+      backgroundColor: selectedButton === button.title ? '#FB723F' : 'white',
+      cursor: 'pointer',
+      textAlign: 'left',
+    }}
+    onMouseEnter={(e) => {
+      if (selectedButton!== button.title) {
+        e.target.style.backgroundColor = "#FB723F";
+      }
+    }}
+    onMouseLeave={(e) => {
+      if (selectedButton !== button.title) {
+        e.target.style.backgroundColor = "white";
+      }
+    }}
+  >
+    {button.icon}&nbsp;
+    {button.title}
+  </button>
+))}
+<button
+                className="btn btn-primary btn-orange"
+                style={{
+                  backgroundColor: "white",
+                  color: "#FB723F",
+                  borderRadius: "30px",
+                  border: "2px solid #FB723F",
+                  margin: "0 1rem",
+                  fontSize: "1.1em",
+                  marginTop: "100%"
+                }}
+                onMouseEnter={(e) => (
+                  (e.target.style.backgroundColor = "#F64A0B"),
+                  (e.target.style.color = "white")
+                )}
+                onMouseLeave={(e) => (
+                  (e.target.style.backgroundColor = "white"),
+                  (e.target.style.color = "#F64A0B")
+                )}
+                onClick={redirect}
+              >
+                <FaInbox className="w-10 h-10 mr-2" />&nbsp;
+                Inbox
+              </button>
 </div>
 
               </div>
@@ -160,7 +236,7 @@ const Admin = () => {
                       backgroundColor: user.exist ? "white" : "ghostwhite",
                     }}
                   >
-                  {selectedButton === 'Users Accounts' && (
+                  {(selectedButton === 'Users Accounts' || selectedButton === 'Desactivated') && (
                     <div>
                       <div className="row">
                         <div className="col-12"><strong><FaRegUser className="w-40 h-40 mr-3"/>
@@ -187,25 +263,17 @@ const Admin = () => {
                     <div style={{ display: "flex", alignItems: "center",  minWidth: '80px'}}>
                       {hoverIndex === index ? (
                         <>
-                          <button
+                         <button
                             style={{
                               background: "transparent",
                               border: "none",
-                              cursor: "pointer",
+                              cursor: "pointer"
                             }}
+                            onClick={() => handleSelectedUser(user)}
                           >
-                            
-                            <MdDelete className="w-10"/>
-                          
-                          </button>
-                          <button
-                            style={{
-                              background: "transparent",
-                              border: "none",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <MdEdit className="w-10 "/>
+                            {selectedButton === 'Users Accounts' && (<MdClose className="w-20" title="Desactivate" />)}
+                          {selectedButton === 'Desactivated' && (<MdCheck className="w-20" title="Activate" />)}
+
                           </button>
                         
                         </>
@@ -224,6 +292,20 @@ const Admin = () => {
         </div>
        
         </div>
+        <Modal show={showModal} onHide={hideModal} style={{marginTop: 20}}>
+        <Modal.Header closeButton>
+          <Modal.Title style={{marginTop: 25, textAlign: 'center'}}>Desactivate Confirmation</Modal.Title>
+        </Modal.Header>
+        <Modal.Body><div className="alert alert-danger">Do you really want to {selectedButton === "Users Accounts" ? "desactivate " : "activate "}this user's account ?</div></Modal.Body>
+        <Modal.Footer>
+          <Button variant="default" onClick={hideModall}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={() => confirmModal() }>
+          {selectedButton === "Users Accounts" ? "desactivate " : "activate "}
+          </Button>
+        </Modal.Footer>
+      </Modal>
      </div>
    
   );
