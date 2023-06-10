@@ -35,6 +35,8 @@ const MessageDetails = (selectedMessage) => {
   const [shareList, setShareList] = useState([]);
   const [viewedbyList, setViewedbyList] = useState([]);
   const [buttons, setButtons] = useState(true);
+  const [ImgHashes, setImgHashes] = useState([]);
+  const [NImgHashes, setNImgHashes] = useState([]);
   
   var res=null;
   var loaded=false;
@@ -234,66 +236,71 @@ const handleShareMessage = async (message) => {
 };
 
  useEffect(() => {
+
+  getSenderEmail();
+getFileFromIPFS();
+
+  }, []);
+
+  const getReplies = async () => {
+    try {
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
   
-    getSenderEmail();
-
-    getFileFromIPFS();
-
-
-    async function getReplies() {
-  const accounts = await window.ethereum.request({
-    method: "eth_requestAccounts",
-  });
-
-  var pubKey = '';
-  if(accounts[0].toLowerCase() == msgC.sender.toLowerCase()){
-     pubKey = await getRecieverPubKey(msgC.receiver);
-  }else{
-     pubKey = await getRecieverPubKey(msgC.sender);
-  }
-   const priKey = await getSenderPriKey(accounts[0]);
+      var pubKey = '';
+      if (accounts[0].toLowerCase() == msgC.sender.toLowerCase()) {
+        pubKey = await getRecieverPubKey(msgC.receiver);
+      } else {
+        pubKey = await getRecieverPubKey(msgC.sender);
+      }
+      const priKey = await getSenderPriKey(accounts[0]);
       const replies = await chatContract.getReplies(msgC.id);
       const encryptedMessages = replies.responses.map((message) => message.message);
       const senders = replies.responses.map((message) => message.sender);
       const receivers = replies.responses.map((message) => message.receiver);
       const filesHashs = replies.responses.map((message) => message.fileHash);
-     console.log(filesHashs);
       var sendersEmails = [];
-      var  receiversEmails = [];
+      var receiversEmails = [];
       var filesHashes = [];
-      for(let i = 0; i < filesHashs.length ; i++){
-        if(filesHashs[i] == ""){
+      for (let i = 0; i < filesHashs.length; i++) {
+        if (filesHashs[i] == "") {
           filesHashes.push("");
-        }else{
-          console.log(filesHashs[i], pubKey, priKey);
-         console.log( decryptMessage(filesHashs[i], pubKey, priKey));
+        } else {
           filesHashes.push(decryptMessage(filesHashs[i], pubKey, priKey));
         }
       }
-      setFileHashes(filesHashes);
-      var hashes = [];
-      for (let i = 0; i < fileHashes.length ; i++){
-        const res = await axios({
-          method: 'get',
-          url: `https://gateway.pinata.cloud/ipfs/`+ fileHashes[i],
-          responseType: 'blob',
-        });
-        const contentType = res.headers['content-type'];
-      if (contentType && contentType.startsWith('image/')) {
-        // If the file is an image, display it
-        const imgUrl = URL.createObjectURL(res.data);
-        hashes.push(imgUrl);
-        console.log(imageUrl);
-        setFileUrl(null);
-      } else {
-        // For other file types, display a download link
-        const fileUrl = URL.createObjectURL(res.data);
-        console.log(fileUrl);
-        setFileUrl(fileUrl);
-        setImageUrl(null);
+      var imgs = [];
+      var files = [];
+      for (let i = 0; i < filesHashes.length; i++) { // Update the loop variable to filesHashes.length
+        if (filesHashes[i] !== "") { // Check against filesHashes, not fileHashes
+          const res = await axios({
+            method: 'get',
+            url: `https://gateway.pinata.cloud/ipfs/` + filesHashes[i], // Use filesHashes[i], not fileHashes[i]
+            responseType: 'blob',
+          });
+          const contentType = res.headers['content-type'];
+          if (contentType && contentType.startsWith('image/')) {
+            // If the file is an image, display it
+            const imgUrl = URL.createObjectURL(res.data);
+            imgs.push(imgUrl);
+            files.push("");
+          } else {
+            // For other file types, display a download link
+            const fileUrl = URL.createObjectURL(res.data);
+            imgs.push("");
+            files.push(fileUrl);
+          }
+        } else {
+          imgs.push("");
+          files.push("");
+        }
       }
-      }
-      for (let i = 0 ; i < senders.length ; i++){
+  
+      setImgHashes(imgs);
+      setNImgHashes(files);
+  
+      for (let i = 0; i < senders.length; i++) {
         const senderEmail = await userContract.getEmail(senders[i]);
         const receiverEmail = await userContract.getEmail(receivers[i]);
         sendersEmails.push(senderEmail);
@@ -311,15 +318,15 @@ const handleShareMessage = async (message) => {
           timestamp: timestamps[index],
         };
       });
-  
       setReplies(repliesArray);
-      
-    }
   
-    getReplies();
-    
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  
 
-  }, []);
+  getReplies();
 
   const getFileFromIPFS = async (hash) => {
     try {
@@ -362,7 +369,7 @@ const handleShareMessage = async (message) => {
         setFileUrl(fileUrl);
         setImageUrl(null);
       }
-  
+
     } catch (error) {
       console.log('Error retrieving file from IPFS:', error);
     }
@@ -370,8 +377,10 @@ const handleShareMessage = async (message) => {
   async function handleShare(message) {
     const shareList = await chatContract.getShares(message.id);
     console.log(shareList);
-    setShowShares(true);
+    if(shareList.length > 0){
+      setShowShares(true);
     setShareList(shareList);
+    }
   }
 
   async function handleView(message) {
@@ -480,8 +489,8 @@ const handleShareMessage = async (message) => {
       </h5>
       <p>{msgC.message}</p>
       <div>
-      {imageUrl &&  <a href={imageUrl}download><img src={msgC.fileHash} alt="Retrieved file" width={800}/></a>}
-            {fileUrl && <a href={fileUrl} download>Download file</a>}
+      {ImgHashes[index] &&  <a href={ImgHashes[index]}download><img src={ImgHashes[index]} alt="Retrieved file" width={400}/></a>}
+            {NImgHashes[index] && <a href={NImgHashes[index]} download>Download file</a>}
       </div>
       <hr/>
 

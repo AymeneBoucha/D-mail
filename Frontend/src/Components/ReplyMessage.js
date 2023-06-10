@@ -119,17 +119,24 @@ const ReplyMessage = ( {selectedMessage} ) => {
        const receiversArray = getReceiversAddresses(emailReceiver);
        console.log(receiversArray);
      
-           const pubKey = await getRecieverPubKey(selectedMessage.sender);
+       var pubKey = "";
+       if(selectedMessage.sender.toLowerCase() == accounts[0].toLowerCase()){
+           pubKey = await getRecieverPubKey(selectedMessage.receiver);
+       }else{
+         pubKey = await getRecieverPubKey(selectedMessage.sender);
+         setEmailReceiver(getEmail(selectedMessage.receiver));
+       }
+           console.log(pubKey);
            const encryptedResponse = encryptMessage(body, pubKey, priKey);
            const encryptedSelected = selectedMessage;
            encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
            encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
-           encryptedSelected.fileHash = encryptMessage(`${resFile.data.IpfsHash}`, pubKey, priKey);
+           const encryptedFileHash = encryptMessage(`${resFile.data.IpfsHash}`, pubKey, priKey);
            if (datetime == ''){
-             const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, 0);
+             const tx = await chatContract.replyTo(encryptedResponse, encryptedFileHash, encryptedSelected, 0);
              //setIsMessageSent(true);
            }else{
-             const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, parseTimestamp(datetime));
+             const tx = await chatContract.replyTo(encryptedResponse, encryptedFileHash, encryptedSelected, parseTimestamp(datetime));
            }
            
        setIsLoading(false);
@@ -163,15 +170,15 @@ var pubKey = "";
       
       const encryptedResponse = encryptMessage(body, pubKey, priKey);
       const encryptedSelected = selectedMessage;
-      encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
+      console.log(pubKey);
+      //encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
       encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
-      encryptedSelected.fileHash = "";
       console.log(encryptedSelected.message);
       if (datetime == ''){
-        const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, 0);
+        const tx = await chatContract.replyTo(encryptedResponse, "",encryptedSelected, 0);
         //setIsMessageSent(true);
       }else{
-        const tx = await chatContract.replyTo(selectedMessage.id, encryptedResponse, encryptedSelected, parseTimestamp(datetime));
+        const tx = await chatContract.replyTo(encryptedResponse, "", encryptedSelected, parseTimestamp(datetime));
       }
       
   setIsLoading(false);
@@ -179,7 +186,6 @@ var pubKey = "";
   setIsLoading(false);
 }
 }
-
   }
 
   async function getAllUsers() {

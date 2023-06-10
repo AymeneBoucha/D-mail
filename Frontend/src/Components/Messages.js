@@ -373,7 +373,6 @@ const Messages = ( props ) => {
           subject: decryptedSubject
         };
         DecryptedMessagesSent.push(newMessage);
-        console.log(newMessage);
       }
       
     }
@@ -386,7 +385,6 @@ const Messages = ( props ) => {
             return (
               formatTimestamp(message.timestamp) ===
                 formatTimestamp(otherMessage.timestamp) &&
-                chatContract.rep(message.id) === false &&
               message.sender === otherMessage.sender &&
               message.receivers_group === otherMessage.receivers_group
             );

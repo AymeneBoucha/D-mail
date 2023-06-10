@@ -10,7 +10,7 @@ contract Operations {
 
     constructor() {
         structures = Structures(0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d);
-        chat = Chat(0x646abcA1ccE238A05F80831ba7Aee68c4Ad216e0);
+        chat = Chat(0xCfF6Cd2b24087f0994f6F4D495FEdD9AE574810F);
     }
 
 struct Draft {

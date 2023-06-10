@@ -85,7 +85,6 @@ const Inbox = () => {
       method: "eth_requestAccounts",
     });
   if(accounts[0].toLowerCase() == "0x7B60eD2A82267aB814256d3aB977ae5434d01d8b".toLowerCase()){
-    console.log("wsalt hna");
     setAdminVerification(true);
   }
   }

@@ -57,24 +57,24 @@ function getReplies(uint256 id) public view returns(Reply memory) {
 }
 
 
-   function replyTo(uint256 messageId, string memory response, Message memory messageOriginal, uint256 timestamp) external {
+   function replyTo(string memory response, string memory fileHash, Message memory messageOriginal, uint256 timestamp) external {
     bool conditionMet = false;
-    if (replies[messageId].responses.length == 0) {
+    if (replies[messageOriginal.originalMessageId].responses.length == 0) {
         for (uint i = 0; i < messages.length && !conditionMet; i++) {
-            if (messages[i].originalMessageId == messageId) {
+            if (messages[i].originalMessageId == messageOriginal.originalMessageId) {
                 messages[i].read = false;
                 conditionMet = true;
             }
         }
-        replies[messageId].responses.push(messageOriginal);
-        addReply(messageId, response, messageOriginal, true, timestamp);
+        replies[messageOriginal.originalMessageId].responses.push(messageOriginal);
+        addReply(response, fileHash, messageOriginal, true, timestamp);
     } else {
-        addReply(messageId, response, messageOriginal, false, timestamp);
+        addReply(response, fileHash, messageOriginal, false, timestamp);
     }
 }
 
 
-function addReply(uint256 messageId, string memory response, Message memory messageOriginal, bool setRep, uint256 timestamp) private {
+function addReply(string memory response, string memory fileHash, Message memory messageOriginal, bool setRep, uint256 timestamp) private {
     uint256 messageTimestamp = (timestamp != 0) ? timestamp : block.timestamp;
     address wallet = (msg.sender !=  messageOriginal.sender) ? messageOriginal.sender : messageOriginal.receiver;
     string memory receiver = (msg.sender !=  messageOriginal.sender) ? messageOriginal.receiversGroup : structures.getEmailByAddress(messageOriginal.receiver);
@@ -89,16 +89,16 @@ function addReply(uint256 messageId, string memory response, Message memory mess
         false,
         new address[](0),
         messageCount,
-        messageOriginal.fileHash,
+        fileHash,
         receiver,
         DeletionStatus.NotDeleted
     );
     rep[messageCount] = true;
     messages.push(message);
-    replies[messageId].responses.push(message);
+    replies[messageOriginal.originalMessageId].responses.push(message);
 
     if (setRep) {
-        replies[messageId].rep = true;
+        replies[messageOriginal.originalMessageId].rep = true;
     }
 
     messageCount++;
