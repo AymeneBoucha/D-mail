@@ -18,9 +18,9 @@ import React from "react";
 import Inbox from "./pages/Inbox";
 import SendMessage from "./Components/SendMessage";
 
-const contractAddressStructures = "0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d";
-const contractAddressChat = "0xCfF6Cd2b24087f0994f6F4D495FEdD9AE574810F";
-const contractAddressOperations = "0xE9073e33630a697dD6886353C854A46Bb0720D37";
+const contractAddressStructures = "0xA440CEa9ac75b67A47e9D9383AacD0ce63C1f32E";
+const contractAddressChat = "0x5af34e0b0ef59850cc1D917005534751Ec1FD811";
+const contractAddressOperations = "0xE7A88A0552875297A7d8757400e4CBFB81fD1709";
 export {
   contractAddressStructures,
   contractAddressChat,

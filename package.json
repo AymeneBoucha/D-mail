@@ -8,11 +8,7 @@
   "dependencies": {
     "asn1": "^0.2.6",
     "assert": "^2.0.0",
-    "crypto": "^1.0.1",
-    "crypto-js": "^4.1.1",
     "dotenv": "^16.0.3",
-    "node-rsa": "^1.1.1",
-    "sjcl": "^1.0.8",
     "web3": "^1.9.0"
   }
 }

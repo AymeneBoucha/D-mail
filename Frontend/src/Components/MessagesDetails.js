@@ -37,6 +37,7 @@ const MessageDetails = (selectedMessage) => {
   const [buttons, setButtons] = useState(true);
   const [ImgHashes, setImgHashes] = useState([]);
   const [NImgHashes, setNImgHashes] = useState([]);
+  const [receiverEmails, setReceiverEmails] = useState("");
   
   var res=null;
   var loaded=false;
@@ -329,6 +330,7 @@ getFileFromIPFS();
   getReplies();
 
   const getFileFromIPFS = async (hash) => {
+    await getEmail(msgC.receiver);
     try {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
@@ -383,6 +385,12 @@ getFileFromIPFS();
     }
   }
 
+  async function getEmail(address){
+    const email = await userContract.getEmail(address);
+    setReceiverEmails(email);
+    return email;
+  }
+
   async function handleView(message) {
     const viewedby = await chatContract.getViewedBy(message.id);
     var viewed = [];
@@ -397,7 +405,7 @@ getFileFromIPFS();
   return (
     <div>
       <br />
-      <h2>{decryptedSubject}</h2>
+      <h2 style={{maxWidth: "80%"}}>{decryptedSubject}</h2>
     
       <div className="buttons-container" style={{ marginLeft: -12 }}>
   {buttons && (
@@ -458,13 +466,15 @@ getFileFromIPFS();
       </h5>
       <h5>
         <b>To: </b>
-        {msgC.receiversGroup}
+        {msgC.receiversGroup === ""
+                                  ? receiverEmails
+                                  : msgC.receiversGroup}
       </h5>
       <h5>
         <b>Sent on: </b>
         {formatTimestamp(msgC.timestamp)}
       </h5>
-      <p>{msgC.message}</p>
+      <p style={{maxWidth: "80%"}}>{msgC.message}</p>
       <div>
       {imageUrl &&  <a href={imageUrl}download><img src={imageUrl} alt="Retrieved file" width={800}/></a>}
             {fileUrl && <a href={fileUrl} download>Download file</a>}
@@ -487,7 +497,7 @@ getFileFromIPFS();
         <b>Sent on: </b>
         {msgC.timestamp}
       </h5>
-      <p>{msgC.message}</p>
+      <p style={{maxWidth: "80%"}}>{msgC.message}</p>
       <div>
       {ImgHashes[index] &&  <a href={ImgHashes[index]}download><img src={ImgHashes[index]} alt="Retrieved file" width={400}/></a>}
             {NImgHashes[index] && <a href={NImgHashes[index]} download>Download file</a>}

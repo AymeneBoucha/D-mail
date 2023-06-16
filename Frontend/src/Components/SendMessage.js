@@ -245,7 +245,6 @@ const SendMessage = (selectedDraft) => {
     }
     
   } catch (error) {
-    console.log("Error sending File to IPFS: ");
     console.log(error);
   }
 }else{

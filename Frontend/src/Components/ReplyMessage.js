@@ -171,10 +171,11 @@ var pubKey = "";
       const encryptedResponse = encryptMessage(body, pubKey, priKey);
       const encryptedSelected = selectedMessage;
       console.log(pubKey);
-      //encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
+      encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
       encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
-      console.log(encryptedSelected.message);
       if (datetime == ''){
+        console.log(encryptedResponse);
+
         const tx = await chatContract.replyTo(encryptedResponse, "",encryptedSelected, 0);
         //setIsMessageSent(true);
       }else{

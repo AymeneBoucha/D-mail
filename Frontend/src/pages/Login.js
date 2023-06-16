@@ -97,44 +97,48 @@ function Login() {
   }
 
   async function handleLogin() {
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    if (exists) {
-      const user = userContract.users(accounts[0]);    // user exists, redirect to inbox
-      console.log(user);
-      if(enabled){
-        
-        const verify = await verifyPassword();
-        if (verify == true) {
-          const infos = await Infos();
-          if (localStorage.getItem("PrivateKey." + infos)) {
-            const encryptedPrivateKey = localStorage.getItem(
-              "PrivateKey." + infos
-            );
-            const decryptedPrivateKey = AES.decrypt(
-              encryptedPrivateKey,
-              password
-            ).toString(CryptoJS.enc.Utf8);
-            sessionStorage.setItem("PrivateKey." + infos, decryptedPrivateKey);
-            window.location.href = "/inbox";
+    try{
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      if (exists) {
+        const user = userContract.users(accounts[0]);    // user exists, redirect to inbox
+        console.log(user);
+        if(enabled){
+          
+          const verify = await verifyPassword();
+          if (verify == true) {
+            const infos = await Infos();
+            if (localStorage.getItem("PrivateKey." + infos)) {
+              const encryptedPrivateKey = localStorage.getItem(
+                "PrivateKey." + infos
+              );
+              const decryptedPrivateKey = AES.decrypt(
+                encryptedPrivateKey,
+                password
+              ).toString(CryptoJS.enc.Utf8);
+              sessionStorage.setItem("PrivateKey." + infos, decryptedPrivateKey);
+              window.location.href = "/inbox";
+            } else {
+              setShowModal(true);
+            }
           } else {
-            setShowModal(true);
+            alert("Invalid Password !");
           }
-        } else {
-          alert("Invalid Password !");
+        }else{
+          setShowModalDesactivated(true);
         }
-      }else{
-        console.log("wsalt hna");
-        setShowModalDesactivated(true);
+        // you can replace '/inbox' with the actual URL of the inbox page
+       
+      } else {
+        // user does not exist, redirect to create account page
+        // you can replace '/create' with the actual URL of the create account page
+        window.location.href = "/create";
       }
-      // you can replace '/inbox' with the actual URL of the inbox page
-     
-    } else {
-      // user does not exist, redirect to create account page
-      // you can replace '/create' with the actual URL of the create account page
-      window.location.href = "/create";
+    }catch(error) {
+    alert("Invalid Password !");
     }
+
   }
 
   useEffect(() => {
@@ -343,12 +347,12 @@ function Login() {
                   </div>
                 )}
                            
-                    <Modal show={showModalDesactivated} onHide={handleCloseModalDesactivated} >
-  <Modal.Header closeButton style={{ backgroundColor: '#ffcccc', borderTopLeftRadius: '10px', borderTopRightRadius: '10px', borderBottom: 'none', marginTop: 20, textAlign: 'center' }}>
-    <Modal.Title style={{ fontSize: '24px', color: '#cc0000', fontWeight: 'bold', textAlign: 'center' }}>Access denied</Modal.Title>
+                <Modal show={showModalDesactivated} onHide={handleCloseModalDesactivated} style={{marginTop: 10}}>
+  <Modal.Header style={{ backgroundColor: '#ffcccc', borderTopLeftRadius: '10px', borderTopRightRadius: '10px', borderBottom: 'none', marginTop: 20 }} className="text-center">
+    <Modal.Title style={{ fontSize: '24px', color: '#cc0000', fontWeight: 'bold' }}>Access denied</Modal.Title>
   </Modal.Header>
-  <Modal.Body style={{ backgroundColor: '#ffcccc',  fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '0', borderTopRightRadius: '0' }}>
-  <p style={{textAlign: 'center', marginTop: '15px', fontSize: '20px'}}>Please consult the administrator regarding the desactivation of your account.</p>
+  <Modal.Body style={{ backgroundColor: '#ffcccc', fontWeight: 'bold', fontSize: '18px', padding: '20px', borderTopLeftRadius: '0', borderTopRightRadius: '0' }}>
+    <p style={{ textAlign: 'center', marginTop: '15px', fontSize: '20px' }}>Please consult the administrator regarding the deactivation of your account.</p>
   </Modal.Body>
   <Modal.Footer style={{ backgroundColor: '#ffcccc', borderTop: 'none', borderBottomLeftRadius: '5px', borderBottomRightRadius: '5px' }}>
     <Button variant="secondary" onClick={handleCloseModalDesactivated}>
@@ -356,6 +360,7 @@ function Login() {
     </Button>
   </Modal.Footer>
 </Modal>
+
                   
               </div>
             </div>

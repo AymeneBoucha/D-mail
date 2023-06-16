@@ -9,8 +9,8 @@ contract Operations {
     Chat chat;
 
     constructor() {
-        structures = Structures(0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d);
-        chat = Chat(0xCfF6Cd2b24087f0994f6F4D495FEdD9AE574810F);
+        structures = Structures(0xA440CEa9ac75b67A47e9D9383AacD0ce63C1f32E);
+        chat = Chat(0x5af34e0b0ef59850cc1D917005534751Ec1FD811);
     }
 
 struct Draft {

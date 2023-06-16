@@ -9,7 +9,7 @@ contract Chat {
 
     Structures structures;
      constructor() {
-    structures = Structures(0x9668f5a8Ca971bA0be47CE7B04d062fA47781F9d);
+    structures = Structures(0xA440CEa9ac75b67A47e9D9383AacD0ce63C1f32E);
 }
     enum DeletionStatus {
         NotDeleted,

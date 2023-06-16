@@ -402,10 +402,10 @@ const Messages = ( props ) => {
       console.log(DecryptedMessagesSent[i].receiversGroup);
       if(DecryptedMessagesSent[i].receiversGroup == ""  ){
         for (let j = 0 ; j < uniqueMessagesArray.length ; j++){
-          console.log(DecryptedMessagesSent[i].timestamp, uniqueMessagesArray[j].timestamp);
           if( formatTimestamp(DecryptedMessagesSent[i].timestamp) ===  formatTimestamp(uniqueMessagesArray[j].timestamp)){
-            const email = await getEmail(uniqueMessagesArray[j].receiver);
-            uniqueMessagesArray[j].receiversGroup = uniqueMessagesArray[j].receiversGroup + "," + email;
+            console.log(DecryptedMessagesSent[i].receiver);
+            const email = await getEmail(DecryptedMessagesSent[i].receiver);
+            uniqueMessagesArray[j].receiversGroup = uniqueMessagesArray[j].receiversGroup + ", CCI: " + email;
           }
         }
       }
