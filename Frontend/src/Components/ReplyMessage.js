@@ -170,7 +170,10 @@ var pubKey = "";
       
       const encryptedResponse = encryptMessage(body, pubKey, priKey);
       const encryptedSelected = selectedMessage;
+<<<<<<< HEAD
       console.log(pubKey);
+=======
+>>>>>>> origin/master
       encryptedSelected.message = encryptMessage(encryptedSelected.message, pubKey, priKey);
       encryptedSelected.subject = encryptMessage(encryptedSelected.subject, pubKey, priKey);
       if (datetime == ''){
